@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>체스 묘수풀이</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #ece5d3;
+    --panel: #fbf8f0;
+    --panel-border: #d9d0ba;
+    --board-light: #f4eedd;
+    --board-dark: #4a5578;
+    --board-frame: #2c3350;
+    --accent-gold: #a97a2c;
+    --accent-good: #4f7a54;
+    --accent-bad: #a2483a;
+    --text-primary: #211f2c;
+    --text-muted: #6b6a7a;
+    --select-ring: #a97a2c;
+    --dot-color: #7a3b18;
+    --serif: 'Fraunces', Georgia, 'Times New Roman', serif;
+    --sans: 'IBM Plex Sans KR', 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12141c;
+      --panel: #1a1d2a;
+      --panel-border: #2c3044;
+      --board-light: #e9e1cc;
+      --board-dark: #333d5c;
+      --board-frame: #0c0e16;
+      --accent-gold: #c9a24b;
+      --accent-good: #7fa985;
+      --accent-bad: #c17663;
+      --text-primary: #f1ecdf;
+      --text-muted: #9a98ab;
+      --select-ring: #c9a24b;
+      --dot-color: #e8b04a;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #12141c;
+    --panel: #1a1d2a;
+    --panel-border: #2c3044;
+    --board-light: #e9e1cc;
+    --board-dark: #333d5c;
+    --board-frame: #0c0e16;
+    --accent-gold: #c9a24b;
+    --accent-good: #7fa985;
+    --accent-bad: #c17663;
+    --text-primary: #f1ecdf;
+    --text-muted: #9a98ab;
+    --select-ring: #c9a24b;
+    --dot-color: #e8b04a;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  html, body { height: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: var(--sans);
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page { max-width: 980px; margin: 0 auto; padding: 40px 20px 64px; }
+
+  header.top { margin-bottom: 32px; }
+
+  .top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  header.top h1 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: clamp(28px, 4.5vw, 40px);
+    letter-spacing: -0.01em;
+    margin: 0 0 6px;
+    color: var(--text-primary);
+  }
+
+  header.top p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 15px;
+    max-width: 60ch;
+    line-height: 1.6;
+  }
+
+  .lang-toggle {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .lang-btn {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--panel-border);
+    background: var(--panel);
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+  .lang-btn.active {
+    border-color: var(--accent-gold);
+    color: var(--accent-gold);
+    font-weight: 600;
+  }
+  .lang-btn:focus-visible { outline: 2px solid var(--select-ring); outline-offset: 2px; }
+
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 260px;
+    gap: 28px;
+    align-items: start;
+  }
+  @media (max-width: 760px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+
+  .board-column { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+
+  .board-meta {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .difficulty-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text-muted);
+    border: 1px solid var(--panel-border);
+    border-radius: 999px;
+    padding: 4px 12px;
+    background: var(--panel);
+  }
+  .difficulty-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-gold); }
+  .difficulty-dot.easy { background: var(--accent-good); }
+  .difficulty-dot.hard { background: var(--accent-bad); }
+
+  .prompt-text { font-size: 15px; color: var(--text-primary); font-weight: 500; }
+
+  .board-frame {
+    position: relative;
+    background: var(--board-frame);
+    padding: 22px;
+    border-radius: 14px;
+    box-shadow: 0 18px 40px -22px rgba(0,0,0,0.45);
+  }
+
+  .board-inner { display: flex; gap: 8px; }
+
+  .rank-labels { display: flex; flex-direction: column; justify-content: space-around; }
+  .rank-labels span, .file-labels span {
+    color: rgba(255,255,255,0.55);
+    font-size: 12px;
+    font-family: var(--sans);
+    width: 16px;
+    text-align: center;
+  }
+
+  .board-main { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0; }
+
+  .board {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(8, 1fr);
+    aspect-ratio: 1 / 1;
+    width: 100%;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .file-labels { display: flex; justify-content: space-around; }
+
+  .sq {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    user-select: none;
+  }
+  .sq.light { background: var(--board-light); }
+  .sq.dark { background: var(--board-dark); }
+
+  .sq.selected::after {
+    content: '';
+    position: absolute;
+    inset: 3px;
+    border: 2.5px solid var(--select-ring);
+    border-radius: 3px;
+    pointer-events: none;
+  }
+
+  .sq.flash-good { animation: flashGood 0.6s ease; }
+  .sq.flash-bad { animation: flashBad 0.5s ease; }
+  @keyframes flashGood {
+    0% { box-shadow: inset 0 0 0 999px rgba(127,169,133,0); }
+    35% { box-shadow: inset 0 0 0 999px rgba(127,169,133,0.55); }
+    100% { box-shadow: inset 0 0 0 999px rgba(127,169,133,0); }
+  }
+  @keyframes flashBad {
+    0% { box-shadow: inset 0 0 0 999px rgba(193,118,99,0); }
+    35% { box-shadow: inset 0 0 0 999px rgba(193,118,99,0.55); }
+    100% { box-shadow: inset 0 0 0 999px rgba(193,118,99,0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sq.flash-good, .sq.flash-bad { animation: none; }
+  }
+
+  .legal-dot {
+    position: absolute;
+    width: 26%;
+    height: 26%;
+    border-radius: 50%;
+    background: var(--dot-color);
+    box-shadow: 0 0 0 2px rgba(0,0,0,0.45), 0 0 0 3px rgba(255,255,255,0.35);
+    pointer-events: none;
+  }
+  .legal-dot.capture {
+    width: 76%;
+    height: 76%;
+    background: transparent;
+    border: 4px solid var(--dot-color);
+    box-shadow: 0 0 0 2px rgba(0,0,0,0.45), inset 0 0 0 2px rgba(255,255,255,0.3);
+  }
+
+  .piece {
+    font-size: clamp(24px, 5.2vw, 44px);
+    line-height: 1;
+    pointer-events: none;
+  }
+  .white-piece {
+    color: #fffaf0;
+    text-shadow:
+      -1.4px -1.4px 0 #14151d,
+      1.4px -1.4px 0 #14151d,
+      -1.4px 1.4px 0 #14151d,
+      1.4px 1.4px 0 #14151d,
+      0 3px 4px rgba(0,0,0,0.4);
+  }
+  .black-piece {
+    color: #0b0b10;
+    text-shadow:
+      -1px -1px 0 rgba(255,255,255,0.7),
+      1px -1px 0 rgba(255,255,255,0.7),
+      -1px 1px 0 rgba(255,255,255,0.7),
+      1px 1px 0 rgba(255,255,255,0.7),
+      0 3px 4px rgba(0,0,0,0.35);
+  }
+
+  .feedback { min-height: 26px; font-size: 14.5px; color: var(--text-muted); line-height: 1.5; }
+  .feedback.good { color: var(--accent-good); font-weight: 500; }
+  .feedback.bad { color: var(--accent-bad); font-weight: 500; }
+
+  .panel { display: flex; flex-direction: column; gap: 16px; }
+  .panel-card { background: var(--panel); border: 1px solid var(--panel-border); border-radius: 12px; padding: 18px 20px; }
+
+  .score-label { font-size: 12.5px; color: var(--text-muted); margin-bottom: 4px; }
+  .score-value { font-family: var(--serif); font-size: 34px; font-weight: 600; color: var(--accent-gold); line-height: 1; }
+
+  .progress-row { display: flex; justify-content: space-between; font-size: 13.5px; color: var(--text-muted); margin-top: 14px; }
+  .progress-bar { margin-top: 8px; height: 5px; border-radius: 999px; background: var(--panel-border); overflow: hidden; }
+  .progress-bar-fill { height: 100%; background: var(--accent-gold); border-radius: 999px; transition: width 0.3s ease; }
+
+  .controls { display: flex; flex-direction: column; gap: 8px; }
+
+  button {
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 500;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--panel-border);
+    background: var(--panel);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  button:hover { border-color: var(--accent-gold); }
+  button:focus-visible { outline: 2px solid var(--select-ring); outline-offset: 2px; }
+  button.primary { background: var(--accent-gold); border-color: var(--accent-gold); color: #1c1408; }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .next-row { display: none; }
+  .next-row.show { display: block; }
+
+  .done-card { display: none; text-align: center; padding: 28px 20px; }
+  .done-card.show { display: block; }
+  .done-card h2 { font-family: var(--serif); font-size: 26px; margin: 0 0 8px; }
+  .done-card p { color: var(--text-muted); font-size: 14.5px; margin: 0 0 18px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="top">
+    <div class="top-row">
+      <div>
+        <h1 id="title-text">체스 묘수풀이</h1>
+        <p id="subtitle-text"></p>
+      </div>
+      <div class="lang-toggle">
+        <button id="lang-ko" class="lang-btn" type="button">한국어</button>
+        <button id="lang-en" class="lang-btn" type="button">English</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <div class="board-column">
+      <div class="board-meta">
+        <span class="difficulty-badge"><span id="diff-dot" class="difficulty-dot"></span><span id="diff-label"></span></span>
+        <span class="prompt-text" id="prompt-text"></span>
+      </div>
+
+      <div class="board-frame">
+        <div class="board-inner">
+          <div class="rank-labels" id="rank-labels"></div>
+          <div class="board-main">
+            <div class="board" id="board"></div>
+            <div class="file-labels" id="file-labels"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+    </div>
+
+    <aside class="panel">
+      <div class="panel-card">
+        <div class="score-label" id="score-label-text"></div>
+        <div class="score-value" id="score">0</div>
+        <div class="progress-row">
+          <span id="progress-text">1 / 20</span>
+          <span id="turn-note-inline"></span>
+        </div>
+        <div class="progress-bar"><div class="progress-bar-fill" id="progress-fill" style="width:0%"></div></div>
+      </div>
+
+      <div class="panel-card controls">
+        <button id="hint-btn" type="button"></button>
+        <button id="reveal-btn" type="button"></button>
+        <div class="next-row" id="next-row">
+          <button id="next-btn" class="primary" type="button"></button>
+        </div>
+        <button id="reset-btn" type="button"></button>
+      </div>
+    </aside>
+  </div>
+
+  <div class="panel-card done-card" id="done-card">
+    <h2 id="done-title"></h2>
+    <p id="done-summary"></p>
+    <button id="restart-btn" class="primary" type="button"></button>
+  </div>
+</div>
+
+<script>
+const ALL_PUZZLES = [
+  {fen:"k5b1/pp1R4/8/8/6K1/8/8/2n5 w - - 0 1",solution:["d7d8"],kind:"mate",difficulty:"easy"},
+  {fen:"3RK1N1/8/8/3b4/8/8/pp6/k7 w - - 0 1",solution:["d8d5"],kind:"free_capture",difficulty:"easy"},
+  {fen:"4k3/3pp3/8/8/8/2Kb4/1R6/4n3 w - - 0 1",solution:["c3d2"],kind:"fork",difficulty:"easy"},
+  {fen:"8/8/8/8/3k4/8/1R4K1/1b3B2 w - - 0 1",solution:["b2b4","b2b1"],kind:"fork_check",difficulty:"easy"},
+  {fen:"7k/6pp/8/8/Q2K4/6b1/4b3/8 w - - 0 1",solution:["a4e8"],kind:"mate",difficulty:"easy"},
+  {fen:"7k/6pp/8/8/7B/6K1/8/3r3R w - - 0 1",solution:["h1d1"],kind:"free_capture",difficulty:"easy"},
+  {fen:"8/8/5K2/k6b/5N2/3R4/8/8 w - - 0 1",solution:["d3d5","f4h5"],kind:"fork_check",difficulty:"easy"},
+  {fen:"8/8/7p/2N5/8/8/ppK5/k7 w - - 0 1",solution:["c5b3"],kind:"mate",difficulty:"easy"},
+  {fen:"8/8/6R1/4K3/6b1/8/6pp/7k w - - 0 1",solution:["g6g4"],kind:"free_capture",difficulty:"easy"},
+  {fen:"8/1k4p1/8/8/4R1N1/1b1K4/8/8 w - - 0 1",solution:["e4b4"],kind:"fork_check",difficulty:"easy"},
+  {fen:"7k/3K2pp/8/8/8/8/1n3R2/8 w - - 0 1",solution:["f2f8"],kind:"mate",difficulty:"easy"},
+  {fen:"8/2r3R1/3K4/8/8/7r/6pp/6k1 w - - 0 1",solution:["d6c7","g7c7"],kind:"free_capture",difficulty:"easy"},
+  {fen:"8/4k3/8/8/8/1n3R2/6K1/8 w - - 0 1",solution:["f3e3","f3b3"],kind:"fork_check",difficulty:"easy"},
+  {fen:"2k5/1ppp3Q/8/1K6/8/6b1/8/8 w - - 0 1",solution:["h7g8","h7h8"],kind:"mate",difficulty:"easy"},
+  {fen:"3kN3/3pp3/8/8/2nK4/8/8/5Q2 w - - 0 1",solution:["d4c4","f1c4"],kind:"free_capture",difficulty:"easy"},
+  {fen:"7k/K5pp/8/5p2/5R2/8/4Q3/8 w - - 0 1",solution:["e2e8"],kind:"mate",difficulty:"easy"},
+  {fen:"1k6/pp6/8/4q3/8/8/7B/1NK5 w - - 0 1",solution:["h2e5"],kind:"free_capture",difficulty:"easy"},
+  {fen:"8/7K/8/b3b3/8/8/1B4pp/7k w - - 0 1",solution:["b2e5"],kind:"free_capture",difficulty:"easy"},
+  {fen:"8/8/8/8/8/7K/2k3nR/8 w - - 0 1",solution:["h3g2","h2g2"],kind:"free_capture",difficulty:"easy"},
+  {fen:"8/7R/4b2n/8/3K4/7k/8/3N4 w - - 0 1",solution:["h7h6"],kind:"free_capture",difficulty:"easy"},
+  {fen:"8/2k3K1/7r/8/8/8/N5b1/4N3 w - - 0 1",solution:["g7h6"],kind:"free_capture",difficulty:"easy"},
+  {fen:"8/8/2R5/8/8/8/pp2bK2/k2B4 w - - 0 1",solution:["f2e2","d1e2"],kind:"free_capture",difficulty:"easy"},
+  {fen:"3r4/8/8/2Bk4/8/5K2/6r1/5N2 w - - 0 1",solution:["f3g2","f1e3"],kind:"free_capture",difficulty:"easy"},
+  {fen:"8/8/7K/4n3/8/1B6/8/B4kb1 w - - 0 1",solution:["a1e5"],kind:"free_capture",difficulty:"easy"},
+  {fen:"8/8/8/2k5/1r6/4K1b1/8/6R1 w - - 0 1",solution:["g1g3"],kind:"free_capture",difficulty:"easy"},
+  {fen:"k4K2/pp6/8/8/5N2/6Q1/6n1/8 w - - 0 1",solution:["f4g2","g3g2"],kind:"free_capture",difficulty:"easy"},
+  {fen:"N7/n1R3b1/8/1qp5/p5K1/8/8/N4k2 w - - 0 1",solution:["c7e7","c7f7"],kind:"fork",difficulty:"medium"},
+  {fen:"8/K6B/2B5/2p5/8/5b2/ppp2n2/bk6 w - - 0 1",solution:["c6f3"],kind:"free_capture",difficulty:"medium"},
+  {fen:"4N3/5k2/8/5b1n/8/8/Kp6/3R4 w - - 0 1",solution:["e8d6"],kind:"fork_check",difficulty:"medium"},
+  {fen:"1K3k2/4ppp1/8/7r/4p2N/3R4/4n3/8 w - - 0 1",solution:["d3d8"],kind:"mate",difficulty:"medium"},
+  {fen:"8/5KQ1/2n1r3/8/8/8/5Bpp/4q2k w - - 0 1",solution:["f2e1"],kind:"good_trade",difficulty:"medium"},
+  {fen:"7K/8/1bn5/5Q2/4B3/8/pppp3b/1k6 w - - 0 1",solution:["f5b5"],kind:"fork",difficulty:"medium"},
+  {fen:"k3K3/8/5B2/N3b3/7q/8/8/2r1n3 w - - 0 1",solution:["f6h4"],kind:"free_capture",difficulty:"medium"},
+  {fen:"4k3/8/4b3/1n6/2R4K/b7/1r1p2Q1/8 w - - 0 1",solution:["g2c6"],kind:"fork_check",difficulty:"medium"},
+  {fen:"2n2q2/8/8/p5KQ/8/8/1p1ppp2/3Bk3 w - - 0 1",solution:["h5e2"],kind:"mate",difficulty:"medium"},
+  {fen:"1B4R1/2q5/8/7K/8/2rp1k2/nB6/8 w - - 0 1",solution:["b8c7"],kind:"good_trade",difficulty:"medium"},
+  {fen:"8/4p2Q/k2b3n/8/3p4/8/2K5/6N1 w - - 0 1",solution:["h7g6"],kind:"fork",difficulty:"medium"},
+  {fen:"R7/3p2k1/2Nq4/4b2K/8/1n6/8/1Q6 w - - 0 1",solution:["b1b3"],kind:"free_capture",difficulty:"medium"},
+  {fen:"8/1k6/8/1N1K4/2r1Q3/8/1n4b1/q7 w - - 0 1",solution:["b5d6"],kind:"fork_check",difficulty:"medium"},
+  {fen:"1k6/ppp5/5Q2/4b1K1/6p1/6R1/8/5rq1 w - - 0 1",solution:["f6d8"],kind:"mate",difficulty:"medium"},
+  {fen:"1b4k1/6pp/7q/5N1R/6K1/3b1Np1/8/8 w - - 0 1",solution:["f5h6"],kind:"good_trade",difficulty:"medium"},
+  {fen:"8/8/3p1k2/4n3/6B1/1QKb4/8/2n4r w - - 0 1",solution:["b3d5"],kind:"fork",difficulty:"medium"},
+  {fen:"3k4/2ppp2q/K7/8/2r1B3/4R3/1p2r3/8 w - - 0 1",solution:["e4h7"],kind:"free_capture",difficulty:"medium"},
+  {fen:"8/5R2/8/7q/2K5/4Q1N1/3rnppp/6k1 w - - 0 1",solution:["e3f2"],kind:"mate",difficulty:"medium"},
+  {fen:"k6B/pp4p1/5p2/KN3Rq1/8/3n4/8/8 w - - 0 1",solution:["f5g5"],kind:"good_trade",difficulty:"medium"},
+  {fen:"8/8/5n2/8/3Kb3/R6B/r5pp/6k1 w - - 0 1",solution:["d4e5"],kind:"fork",difficulty:"medium"},
+  {fen:"3kN3/2p1p3/pR6/8/4r3/K1B5/4b3/4b3 w - - 0 1",solution:["c3e1"],kind:"free_capture",difficulty:"medium"},
+  {fen:"k1r5/pp1n1N2/8/8/4r3/8/5N1K/3R4 w - - 0 1",solution:["f7d6"],kind:"fork",difficulty:"medium"},
+  {fen:"8/1R6/2p5/2r5/7N/r7/3pppn1/4k2K w - - 0 1",solution:["h1g2","h4g2"],kind:"free_capture",difficulty:"medium"},
+  {fen:"1r2b3/R7/7R/8/4n2B/8/2ppK3/2k5 w - - 0 1",solution:["h6e6","a7e7"],kind:"fork",difficulty:"medium"},
+  {fen:"8/5N2/3B4/8/4k1bK/b6p/6q1/6rR w - - 0 1",solution:["d6a3"],kind:"free_capture",difficulty:"medium"},
+  {fen:"1R1b3k/r5pp/8/7K/6nb/4r3/4Q3/8 w - - 0 1",solution:["e2d2"],kind:"fork",difficulty:"medium"},
+  {fen:"8/8/q2pn3/4N3/6B1/5p2/2Kppp2/4k3 w - - 0 1",solution:["g4e6"],kind:"free_capture",difficulty:"medium"},
+  {fen:"2n3r1/1Kp2b2/6k1/1N5b/8/B7/1n4Br/2N5 w - - 0 1",solution:["a3b2"],kind:"free_capture",difficulty:"hard"},
+  {fen:"Q4bK1/p7/1r6/4B1p1/4b1kN/2n5/3r4/q7 w - - 0 1",solution:["a8c8"],kind:"fork_check",difficulty:"hard"},
+  {fen:"8/3p2r1/K7/b5k1/3bqr2/n1N4R/3n2p1/5B2 w - - 0 1",solution:["c3e4"],kind:"good_trade",difficulty:"hard"},
+  {fen:"1n4r1/5Q2/3b4/4k2p/3r4/1K5B/2Rp4/3q4 w - - 0 1",solution:["f7f5"],kind:"mate",difficulty:"hard"},
+  {fen:"RrQ2n2/4B3/p2b4/3r2n1/3b4/2p5/2q1k3/7K w - - 0 1",solution:["c8c6","c8c4"],kind:"fork",difficulty:"hard"},
+  {fen:"1K6/1BN5/3n4/8/8/k5p1/1b2bpnR/6Br w - - 0 1",solution:["h2h1"],kind:"free_capture",difficulty:"hard"},
+  {fen:"b1k5/1pppK3/Q2p1Rb1/2r5/2nr4/B7/7R/6q1 w - - 0 1",solution:["a6a8"],kind:"mate",difficulty:"hard"},
+  {fen:"3N4/1n4p1/6p1/1b2r3/5K2/rk6/8/n5Q1 w - - 0 1",solution:["g1d4","g1c1"],kind:"fork",difficulty:"hard"},
+  {fen:"7b/5p1Q/1K1br3/3kp3/7N/8/3r4/5B2 w - - 0 1",solution:["h7h8"],kind:"free_capture",difficulty:"hard"},
+  {fen:"7k/1p4pp/8/1n2NR2/3p3K/8/3rQ3/q1r5 w - - 0 1",solution:["f5f8"],kind:"mate",difficulty:"hard"},
+  {fen:"b4Q2/k2pR3/p3N1b1/1q6/4r1n1/3n4/6r1/K7 w - - 0 1",solution:["e6c7"],kind:"fork",difficulty:"hard"},
+  {fen:"1N6/1r3np1/1p6/7b/1BKRn3/q5b1/2Qppp2/4k1r1 w - - 0 1",solution:["b4a3"],kind:"free_capture",difficulty:"hard"},
+  {fen:"3B4/6R1/K1n4r/8/3N3b/1r6/ppp4b/kB6 w - - 0 1",solution:["d4f5"],kind:"fork",difficulty:"hard"},
+  {fen:"1R6/7K/Nq3k2/1bp1p3/4n3/3B4/3n4/2R5 w - - 0 1",solution:["b8b6"],kind:"free_capture",difficulty:"hard"},
+  {fen:"8/2n5/1r6/3Q4/5b2/8/2qpppR1/1b2k1nK w - - 0 1",solution:["d5d4"],kind:"fork",difficulty:"hard"},
+  {fen:"2b1K3/3n3q/2b5/1N4r1/2r4R/2R2Bk1/5p1p/8 w - - 0 1",solution:["h4h7"],kind:"free_capture",difficulty:"hard"},
+  {fen:"4r3/7n/2p3Q1/4q3/8/6r1/2K1Bnpp/RR3b1k w - - 0 1",solution:["g6f7"],kind:"fork",difficulty:"hard"},
+  {fen:"2krn3/1ppp3p/b3B1R1/3Q4/1R4n1/5K2/3q4/7r w - - 0 1",solution:["d5d2"],kind:"free_capture",difficulty:"hard"},
+  {fen:"5nr1/3b4/1p2k3/2p5/2n3rq/RK2bB2/N7/8 w - - 0 1",solution:["f3e2"],kind:"fork",difficulty:"hard"},
+  {fen:"8/3b4/3K1b2/6N1/2r5/3nqR2/pr4pp/7k w - - 0 1",solution:["f3e3"],kind:"free_capture",difficulty:"hard"},
+  {fen:"1r1Q4/6K1/8/2rb2b1/2pN4/2R5/3q2pp/7k w - - 0 1",solution:["d8d6"],kind:"fork",difficulty:"hard"},
+  {fen:"4n3/1q3Q2/6B1/bn5p/1p5k/8/8/6K1 w - - 0 1",solution:["f7b7"],kind:"free_capture",difficulty:"hard"},
+  {fen:"q7/1n2B1p1/1K6/2r5/4R2b/4B3/ppp3b1/1k1n4 w - - 0 1",solution:["e4g4","e4d4"],kind:"fork",difficulty:"hard"},
+  {fen:"3k4/n1pppq2/R5b1/4Kp1r/1b6/3N4/1p5r/7n w - - 0 1",solution:["d3f4"],kind:"fork",difficulty:"hard"},
+  {fen:"1r6/8/3pB1K1/q1n5/p3QNN1/2r5/6pp/5b1k w - - 0 1",solution:["e4d4","e4e1"],kind:"fork",difficulty:"hard"},
+  {fen:"8/5B2/8/8/8/3K4/2pn4/k7 w - - 0 1",solution:["d3d2"],kind:"free_capture",difficulty:"easy"},
+  {fen:"2k5/1ppp4/8/7n/8/3K4/8/3B4 w - - 0 1",solution:["d1h5"],kind:"free_capture",difficulty:"easy"},
+  {fen:"8/1N6/8/K5p1/1n6/8/8/1k6 w - - 0 1",solution:["a5b4"],kind:"free_capture",difficulty:"easy"},
+  {fen:"8/8/8/3K4/7r/8/2b3N1/6k1 w - - 0 1",solution:["g2h4"],kind:"free_capture",difficulty:"easy"},
+  {fen:"7k/6pp/8/8/8/R4K1p/3b4/8 w - - 0 1",solution:["a3a8"],kind:"mate",difficulty:"easy"},
+  {fen:"4K3/8/8/7n/8/8/3qR3/k7 w - - 0 1",solution:["e2d2"],kind:"free_capture",difficulty:"easy"},
+  {fen:"2k1b3/1p1p2B1/8/8/4RK2/8/8/8 w - - 0 1",solution:["e4e8"],kind:"free_capture",difficulty:"easy"},
+  {fen:"8/RB6/8/8/1k2K3/3r4/8/8 w - - 0 1",solution:["e4d3"],kind:"free_capture",difficulty:"easy"},
+  {fen:"1k6/p1p5/4b1R1/n1p2QB1/8/8/2K5/6b1 w - - 0 1",solution:["g6e6","f5e6"],kind:"free_capture",difficulty:"medium"},
+  {fen:"5rb1/1N6/4k3/n2R4/4K3/r7/3R4/8 w - - 0 1",solution:["d5g5"],kind:"fork",difficulty:"medium"},
+  {fen:"8/3Qnk2/N1p5/8/K7/7b/8/8 w - - 0 1",solution:["d7h3"],kind:"free_capture",difficulty:"medium"},
+  {fen:"N7/8/1Kp5/8/8/1br5/2Q1pp2/r2n1k2 w - - 0 1",solution:["c2d2"],kind:"fork",difficulty:"medium"},
+  {fen:"8/b3R1p1/8/1K1N4/3r4/8/2pp4/3k2q1 w - - 0 1",solution:["e7a7"],kind:"free_capture",difficulty:"medium"},
+  {fen:"4b3/8/2n4k/B7/8/Q3b3/4K3/8 w - - 0 1",solution:["a3c3"],kind:"fork",difficulty:"medium"},
+  {fen:"5N2/B1q2p2/K4N2/R7/1brpr3/n7/k7/n3b3 w - - 0 1",solution:["f6d5"],kind:"fork",difficulty:"hard"},
+  {fen:"4nk2/4ppp1/1p5n/4K3/1b6/1R6/5Q2/1b3q1R w - - 0 1",solution:["h1f1","f2f1"],kind:"free_capture",difficulty:"hard"},
+  {fen:"3b4/8/Q3K3/bn3Br1/8/8/3n1ppp/1r4k1 w - - 0 1",solution:["f5d3"],kind:"fork",difficulty:"hard"},
+  {fen:"3k3b/2p1p3/6rp/2r5/8/RK2n3/N3n3/1Nb2R2 w - - 0 1",solution:["f1e1"],kind:"fork",difficulty:"hard"},
+  {fen:"7B/n2p3q/7Q/5br1/1R6/1p3Kbr/pppR4/1k6 w - - 0 1",solution:["f3g2","h6f6"],kind:"fork",difficulty:"hard"},
+  {fen:"2r5/4NN2/5q2/4Q1br/2p5/K5p1/5n2/R2n3k w - - 0 1",solution:["e5e2"],kind:"fork",difficulty:"hard"},
+  {fen:"N2b1r2/q2Q4/1bn5/6r1/5p2/4Bp2/5ppp/1K4k1 w - - 0 1",solution:["d7d1"],kind:"mate",difficulty:"hard"},
+  {fen:"1R2b3/5qb1/K1kr4/1r1p3n/8/2N5/1n2p3/8 w - - 0 1",solution:["b8c8"],kind:"fork_check",difficulty:"hard"}
+];
+
+(function () {
+  const STRINGS = {
+    ko: {
+      title: '체스 묘수풀이',
+      subtitle: '체스판에서 가장 멋진 수를 찾아보세요! 기물을 콕 누르면 어디로 갈 수 있는지 알려줘요. 시간 제한이 없으니 천천히 생각해도 괜찮아요.',
+      scoreLabel: '점수',
+      hintBtn: '힌트 보기',
+      revealBtn: '정답 보기',
+      nextBtn: '다음 문제 →',
+      resetBtn: '처음부터 다시',
+      restartBtn: '다시 도전하기',
+      doneTitle: '모든 문제를 풀었습니다',
+      doneSummary: function (score, total) { return '총 ' + total + '문제 중 ' + score + '점을 획득했습니다.'; },
+      whiteTurn: '당신은 백입니다',
+      blackTurn: '당신은 흑입니다',
+      correct: function (piece, from, to, pts) { return '정답이에요! 정말 잘 찾았어요 👏 ' + piece + ' ' + from + ' → ' + to + ' (+' + pts + '점)'; },
+      wrong: function (penalty) { return '아깝다! 다시 한번 잘 살펴볼까요? (-' + penalty + '점)'; },
+      revealText: function (piece, from, to) { return '정답은 ' + piece + ' ' + from + ' → ' + to + '예요. 다음엔 꼭 스스로 찾아봐요! (점수 없음)'; },
+      hintText: function (body) { return '힌트: ' + body; },
+      diff: { easy: '쉬움', medium: '보통', hard: '어려움' },
+      pieces: { P: '폰', N: '나이트', B: '비숍', R: '룩', Q: '퀸', K: '킹' },
+      kindPrompt: {
+        mate: '상대 킹을 꼼짝 못 하게 만드는 수를 찾아보세요! 🏆',
+        free_capture: '아무도 지키지 않는 상대 기물을 공짜로 잡아보세요! 🎯',
+        good_trade: '더 힘센 기물과 바꿀 수 있는 수를 찾아보세요! ⚖️',
+        fork: '한 번에 기물 두 개를 동시에 노려보세요! 🍴',
+        fork_check: '체크를 하면서 동시에 다른 기물도 노려보세요! ⚡'
+      },
+      kindHint: function (kind, pieceName) {
+        const map = {
+          mate: pieceName + '이 움직이면 상대 킹이 도망갈 칸이 하나도 없어져요. 킹 주변 칸을 하나씩 세어보세요!',
+          free_capture: pieceName + '이 갈 수 있는 칸 중에, 아무도 지켜주지 않는 상대 기물이 있어요. 잘 찾아보세요!',
+          good_trade: pieceName + '로 나보다 더 힘센 기물을 잡을 수 있어요. 나중에 내 기물을 잃어도 결국 이득이에요!',
+          fork: pieceName + '이 한 번만 움직여도 두 개의 기물을 동시에 노릴 수 있는 자리가 있어요. 어디일까요?',
+          fork_check: pieceName + '로 체크를 하면서 동시에 다른 기물도 공격해보세요. 상대는 둘 다 지킬 수 없어요!'
+        };
+        return map[kind] || '기물들이 어디로 움직일 수 있는지 하나씩 확인해보세요.';
+      }
+    },
+    en: {
+      title: 'Chess Puzzle Trainer',
+      subtitle: "Find the coolest move on the board! Tap a piece to see where it can go. There's no timer, so take all the time you need.",
+      scoreLabel: 'Score',
+      hintBtn: 'Show hint',
+      revealBtn: 'Reveal answer',
+      nextBtn: 'Next puzzle →',
+      resetBtn: 'Restart',
+      restartBtn: 'Try again',
+      doneTitle: 'You solved every puzzle',
+      doneSummary: function (score, total) { return 'You scored ' + score + ' points out of ' + total + ' puzzles.'; },
+      whiteTurn: 'You are playing White',
+      blackTurn: 'You are playing Black',
+      correct: function (piece, from, to, pts) { return 'Correct! Great job 👏 ' + piece + ' ' + from + ' → ' + to + ' (+' + pts + ' pts)'; },
+      wrong: function (penalty) { return 'So close! Take another look. (-' + penalty + ' pts)'; },
+      revealText: function (piece, from, to) { return 'The answer was ' + piece + ' ' + from + ' → ' + to + '. Try to find it yourself next time! (no points)'; },
+      hintText: function (body) { return 'Hint: ' + body; },
+      diff: { easy: 'Easy', medium: 'Medium', hard: 'Hard' },
+      pieces: { P: 'Pawn', N: 'Knight', B: 'Bishop', R: 'Rook', Q: 'Queen', K: 'King' },
+      kindPrompt: {
+        mate: 'Trap the enemy king so it cannot escape! 🏆',
+        free_capture: 'Capture a piece that nobody is protecting! 🎯',
+        good_trade: 'Find a trade that wins you a stronger piece! ⚖️',
+        fork: 'Attack two pieces at the same time! 🍴',
+        fork_check: 'Give check while also attacking another piece! ⚡'
+      },
+      kindHint: function (kind, pieceName) {
+        const map = {
+          mate: 'Once your ' + pieceName.toLowerCase() + ' moves, the enemy king will have nowhere to run. Count the squares around the king!',
+          free_capture: 'Your ' + pieceName.toLowerCase() + ' can reach a piece that nobody is guarding. Can you spot it?',
+          good_trade: 'Your ' + pieceName.toLowerCase() + ' can capture something worth more than itself — even if it gets captured back, you still come out ahead!',
+          fork: 'One move with your ' + pieceName.toLowerCase() + ' can attack two pieces at once. Where could that be?',
+          fork_check: 'Give check with your ' + pieceName.toLowerCase() + ' while also attacking another piece — they can only save one!'
+        };
+        return map[kind] || 'Look carefully at where each piece can move.';
+      }
+    }
+  };
+
+  const PIECE_GLYPHS = {
+    K: '♔', Q: '♕', R: '♖', B: '♗', N: '♘', P: '♙',
+    k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟'
+  };
+  const DIFF_POINTS = { easy: 10, medium: 25, hard: 45 };
+  const WRONG_PENALTY = { easy: 5, medium: 8, hard: 12 };
+
+  let lang = 'ko';
+  try {
+    const saved = localStorage.getItem('chess-puzzle-lang');
+    if (saved === 'en' || saved === 'ko') lang = saved;
+  } catch (e) {}
+
+  const ROUND_SIZE = { easy: 7, medium: 7, hard: 6 };
+  let PUZZLES = [];
+
+  function shuffle(a) {
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+    }
+    return a;
+  }
+
+  // Pick a balanced set per difficulty, mixing puzzle kinds as evenly as possible.
+  function pickRound() {
+    const picked = [];
+    ['easy', 'medium', 'hard'].forEach(function (d) {
+      const groups = {};
+      ALL_PUZZLES.filter(function (p) { return p.difficulty === d; }).forEach(function (p) {
+        (groups[p.kind] = groups[p.kind] || []).push(p);
+      });
+      const kinds = shuffle(Object.keys(groups));
+      kinds.forEach(function (k) { shuffle(groups[k]); });
+      const chosen = [];
+      let i = 0;
+      while (chosen.length < ROUND_SIZE[d] && kinds.some(function (k) { return groups[k].length; })) {
+        const k = kinds[i % kinds.length];
+        if (groups[k].length) chosen.push(groups[k].pop());
+        i++;
+      }
+      picked.push.apply(picked, shuffle(chosen));
+    });
+    return picked;
+  }
+
+  let puzzleIndex = 0;
+  let score = 0;
+  let board = [];
+  let playerColor = 'w';
+  let selected = null;
+  let legalTargets = [];
+  let solved = false;
+
+  const boardEl = document.getElementById('board');
+  const scoreEl = document.getElementById('score');
+  const progressTextEl = document.getElementById('progress-text');
+  const progressFillEl = document.getElementById('progress-fill');
+  const feedbackEl = document.getElementById('feedback');
+  const promptTextEl = document.getElementById('prompt-text');
+  const diffLabelEl = document.getElementById('diff-label');
+  const diffDotEl = document.getElementById('diff-dot');
+  const turnNoteEl = document.getElementById('turn-note-inline');
+  const hintBtn = document.getElementById('hint-btn');
+  const revealBtn = document.getElementById('reveal-btn');
+  const nextRow = document.getElementById('next-row');
+  const nextBtn = document.getElementById('next-btn');
+  const resetBtn = document.getElementById('reset-btn');
+  const doneCard = document.getElementById('done-card');
+  const doneSummary = document.getElementById('done-summary');
+  const doneTitleEl = document.getElementById('done-title');
+  const restartBtn = document.getElementById('restart-btn');
+  const rankLabelsEl = document.getElementById('rank-labels');
+  const fileLabelsEl = document.getElementById('file-labels');
+  const titleEl = document.getElementById('title-text');
+  const subtitleEl = document.getElementById('subtitle-text');
+  const scoreLabelEl = document.getElementById('score-label-text');
+  const langKoBtn = document.getElementById('lang-ko');
+  const langEnBtn = document.getElementById('lang-en');
+
+  function t() { return STRINGS[lang]; }
+  function isWhite(p) { return p === p.toUpperCase(); }
+  function isBlack(p) { return p === p.toLowerCase(); }
+  function inBounds(r, c) { return r >= 0 && r < 8 && c >= 0 && c < 8; }
+  function sqName(r, c) { return String.fromCharCode(97 + c) + (8 - r); }
+  function rcFromSquare(name) { return [8 - Number(name[1]), name.charCodeAt(0) - 97]; }
+
+  function parseFEN(fen) {
+    const rows = fen.split(' ')[0].split('/');
+    const b = [];
+    for (const row of rows) {
+      const boardRow = [];
+      for (const ch of row) {
+        if (/\d/.test(ch)) {
+          for (let i = 0; i < Number(ch); i++) boardRow.push(null);
+        } else {
+          boardRow.push(ch);
+        }
+      }
+      b.push(boardRow);
+    }
+    return b;
+  }
+
+  function generateMoves(b, r, c) {
+    const piece = b[r][c];
+    if (!piece) return [];
+    const white = isWhite(piece);
+    const type = piece.toUpperCase();
+    const moves = [];
+
+    function tryStep(nr, nc) {
+      if (!inBounds(nr, nc)) return;
+      const target = b[nr][nc];
+      if (!target) { moves.push([nr, nc]); return; }
+      if ((white && isBlack(target)) || (!white && isWhite(target))) moves.push([nr, nc]);
+    }
+    function trySlide(dr, dc) {
+      let nr = r + dr, nc = c + dc;
+      while (inBounds(nr, nc)) {
+        const target = b[nr][nc];
+        if (!target) { moves.push([nr, nc]); nr += dr; nc += dc; continue; }
+        if ((white && isBlack(target)) || (!white && isWhite(target))) moves.push([nr, nc]);
+        break;
+      }
+    }
+
+    if (type === 'N') {
+      [[1,2],[2,1],[-1,2],[-2,1],[1,-2],[2,-1],[-1,-2],[-2,-1]].forEach(function (o) { tryStep(r+o[0], c+o[1]); });
+    } else if (type === 'K') {
+      [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]].forEach(function (o) { tryStep(r+o[0], c+o[1]); });
+    } else if (type === 'P') {
+      const dir = white ? -1 : 1;
+      const startRow = white ? 6 : 1;
+      if (inBounds(r+dir, c) && !b[r+dir][c]) {
+        moves.push([r+dir, c]);
+        if (r === startRow && !b[r+2*dir][c]) moves.push([r+2*dir, c]);
+      }
+      [-1, 1].forEach(function (dc) {
+        const nr = r+dir, nc = c+dc;
+        if (inBounds(nr, nc) && b[nr][nc]) {
+          const tgt = b[nr][nc];
+          if ((white && isBlack(tgt)) || (!white && isWhite(tgt))) moves.push([nr, nc]);
+        }
+      });
+    } else {
+      let dirs = [];
+      if (type === 'R') dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+      if (type === 'B') dirs = [[1,1],[1,-1],[-1,1],[-1,-1]];
+      if (type === 'Q') dirs = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+      dirs.forEach(function (d) { trySlide(d[0], d[1]); });
+    }
+    return moves;
+  }
+
+  function currentPuzzle() { return PUZZLES[puzzleIndex]; }
+
+  function applyStaticStrings() {
+    const s = t();
+    titleEl.textContent = s.title;
+    subtitleEl.textContent = s.subtitle;
+    scoreLabelEl.textContent = s.scoreLabel;
+    hintBtn.textContent = s.hintBtn;
+    revealBtn.textContent = s.revealBtn;
+    nextBtn.textContent = s.nextBtn;
+    resetBtn.textContent = s.resetBtn;
+    restartBtn.textContent = s.restartBtn;
+    doneTitleEl.textContent = s.doneTitle;
+    doneSummary.textContent = s.doneSummary(score, PUZZLES.length);
+    langKoBtn.classList.toggle('active', lang === 'ko');
+    langEnBtn.classList.toggle('active', lang === 'en');
+    document.documentElement.lang = lang;
+  }
+
+  function applyPuzzleStrings() {
+    const s = t();
+    const p = currentPuzzle();
+    promptTextEl.textContent = s.kindPrompt[p.kind];
+    diffLabelEl.textContent = s.diff[p.difficulty];
+    turnNoteEl.textContent = playerColor === 'w' ? s.whiteTurn : s.blackTurn;
+  }
+
+  function setLang(l) {
+    lang = l;
+    try { localStorage.setItem('chess-puzzle-lang', l); } catch (e) {}
+    applyStaticStrings();
+    applyPuzzleStrings();
+  }
+
+  function loadPuzzle() {
+    const p = currentPuzzle();
+    board = parseFEN(p.fen);
+    playerColor = p.fen.split(' ')[1] || 'w';
+    selected = null;
+    legalTargets = [];
+    solved = false;
+    feedbackEl.textContent = '';
+    feedbackEl.className = 'feedback';
+    diffDotEl.className = 'difficulty-dot ' + p.difficulty;
+    progressTextEl.textContent = (puzzleIndex + 1) + ' / ' + PUZZLES.length;
+    progressFillEl.style.width = Math.round((puzzleIndex / PUZZLES.length) * 100) + '%';
+    hintBtn.disabled = false;
+    revealBtn.disabled = false;
+    nextRow.classList.remove('show');
+    doneCard.classList.remove('show');
+    applyPuzzleStrings();
+    renderLabels();
+    render();
+  }
+
+  function renderLabels() {
+    rankLabelsEl.innerHTML = '';
+    for (let r = 8; r >= 1; r--) {
+      const s = document.createElement('span');
+      s.textContent = r;
+      rankLabelsEl.appendChild(s);
+    }
+    fileLabelsEl.innerHTML = '';
+    ['a','b','c','d','e','f','g','h'].forEach(function (f) {
+      const s = document.createElement('span');
+      s.textContent = f;
+      fileLabelsEl.appendChild(s);
+    });
+  }
+
+  function render() {
+    boardEl.innerHTML = '';
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        const cell = document.createElement('div');
+        const isLight = (r + c) % 2 === 0;
+        cell.className = 'sq ' + (isLight ? 'light' : 'dark');
+        cell.dataset.r = r;
+        cell.dataset.c = c;
+        const piece = board[r][c];
+        if (piece) {
+          const span = document.createElement('span');
+          span.className = 'piece ' + (isWhite(piece) ? 'white-piece' : 'black-piece');
+          span.textContent = PIECE_GLYPHS[piece];
+          cell.appendChild(span);
+        }
+        if (selected && selected[0] === r && selected[1] === c) cell.classList.add('selected');
+        if (legalTargets.some(function (t2) { return t2[0] === r && t2[1] === c; })) {
+          const dot = document.createElement('div');
+          dot.className = 'legal-dot' + (piece ? ' capture' : '');
+          cell.appendChild(dot);
+        }
+        cell.addEventListener('click', onSquareClick);
+        boardEl.appendChild(cell);
+      }
+    }
+  }
+
+  function onSquareClick(e) {
+    if (solved) return;
+    const r = Number(e.currentTarget.dataset.r);
+    const c = Number(e.currentTarget.dataset.c);
+    const piece = board[r][c];
+
+    if (selected) {
+      const isTarget = legalTargets.some(function (t2) { return t2[0] === r && t2[1] === c; });
+      if (isTarget) { attemptMove(selected[0], selected[1], r, c); return; }
+      if (piece && ((playerColor === 'w' && isWhite(piece)) || (playerColor === 'b' && isBlack(piece)))) {
+        selected = [r, c];
+        legalTargets = generateMoves(board, r, c);
+        render();
+        return;
+      }
+      selected = null; legalTargets = []; render();
+      return;
+    }
+
+    if (piece && ((playerColor === 'w' && isWhite(piece)) || (playerColor === 'b' && isBlack(piece)))) {
+      selected = [r, c];
+      legalTargets = generateMoves(board, r, c);
+      render();
+    }
+  }
+
+  function attemptMove(fr, fc, tr, tc) {
+    const s = t();
+    const p = currentPuzzle();
+    const moveStr = sqName(fr, fc) + sqName(tr, tc);
+    const isCorrect = p.solution.indexOf(moveStr) !== -1;
+    const piece = board[fr][fc];
+
+    if (isCorrect) {
+      board[tr][tc] = piece; board[fr][fc] = null;
+      selected = null; legalTargets = []; solved = true;
+      render();
+      flashSquare(tr, tc, 'good');
+      const pts = DIFF_POINTS[p.difficulty];
+      score += pts;
+      scoreEl.textContent = score;
+      progressFillEl.style.width = Math.round(((puzzleIndex + 1) / PUZZLES.length) * 100) + '%';
+      const pieceName = s.pieces[piece.toUpperCase()];
+      feedbackEl.textContent = s.correct(pieceName, sqName(fr, fc), sqName(tr, tc), pts);
+      feedbackEl.className = 'feedback good';
+      hintBtn.disabled = true; revealBtn.disabled = true;
+      nextRow.classList.add('show');
+    } else {
+      flashSquare(tr, tc, 'bad');
+      const penalty = WRONG_PENALTY[p.difficulty];
+      score = Math.max(0, score - penalty);
+      scoreEl.textContent = score;
+      feedbackEl.textContent = s.wrong(penalty);
+      feedbackEl.className = 'feedback bad';
+      selected = null; legalTargets = [];
+      render();
+    }
+  }
+
+  function flashSquare(r, c, kind) {
+    const idx = r * 8 + c;
+    const cell = boardEl.children[idx];
+    if (!cell) return;
+    cell.classList.add(kind === 'good' ? 'flash-good' : 'flash-bad');
+    setTimeout(function () { cell.classList.remove('flash-good', 'flash-bad'); }, 650);
+  }
+
+  hintBtn.addEventListener('click', function () {
+    const s = t();
+    const p = currentPuzzle();
+    const [fr, fc] = rcFromSquare(p.solution[0].slice(0, 2));
+    const piece = board[fr][fc];
+    const pieceName = s.pieces[piece.toUpperCase()];
+    feedbackEl.textContent = s.hintText(s.kindHint(p.kind, pieceName));
+    feedbackEl.className = 'feedback';
+  });
+
+  revealBtn.addEventListener('click', function () {
+    if (solved) return;
+    const s = t();
+    const p = currentPuzzle();
+    const from = p.solution[0].slice(0, 2), to = p.solution[0].slice(2, 4);
+    const [fr, fc] = rcFromSquare(from);
+    const [tr, tc] = rcFromSquare(to);
+    const piece = board[fr][fc];
+    board[tr][tc] = piece; board[fr][fc] = null;
+    selected = null; legalTargets = []; solved = true;
+    render();
+    flashSquare(tr, tc, 'good');
+    const pieceName = s.pieces[piece.toUpperCase()];
+    feedbackEl.textContent = s.revealText(pieceName, from, to);
+    feedbackEl.className = 'feedback';
+    hintBtn.disabled = true; revealBtn.disabled = true;
+    nextRow.classList.add('show');
+  });
+
+  nextBtn.addEventListener('click', function () {
+    puzzleIndex += 1;
+    if (puzzleIndex >= PUZZLES.length) {
+      document.querySelector('.layout').style.display = 'none';
+      doneSummary.textContent = t().doneSummary(score, PUZZLES.length);
+      doneCard.classList.add('show');
+      return;
+    }
+    loadPuzzle();
+  });
+
+  function fullReset() {
+    puzzleIndex = 0; score = 0;
+    PUZZLES = pickRound();
+    scoreEl.textContent = '0';
+    document.querySelector('.layout').style.display = 'grid';
+    doneCard.classList.remove('show');
+    loadPuzzle();
+  }
+
+  resetBtn.addEventListener('click', fullReset);
+  restartBtn.addEventListener('click', fullReset);
+  langKoBtn.addEventListener('click', function () { setLang('ko'); });
+  langEnBtn.addEventListener('click', function () { setLang('en'); });
+
+  PUZZLES = pickRound();
+  applyStaticStrings();
+  loadPuzzle();
+})();
+</script>
+</body>
+</html>
