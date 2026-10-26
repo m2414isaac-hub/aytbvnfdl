@@ -1,0 +1,2016 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>체스 묘수풀이</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #ece5d3;
+    --panel: #fbf8f0;
+    --panel-border: #d9d0ba;
+    --board-light: #f4eedd;
+    --board-dark: #4a5578;
+    --board-frame: #2c3350;
+    --accent-gold: #a97a2c;
+    --accent-good: #4f7a54;
+    --accent-bad: #a2483a;
+    --text-primary: #211f2c;
+    --text-muted: #6b6a7a;
+    --select-ring: #a97a2c;
+    --dot-color: #7a3b18;
+    --serif: 'Fraunces', Georgia, 'Times New Roman', serif;
+    --sans: 'IBM Plex Sans KR', 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12141c;
+      --panel: #1a1d2a;
+      --panel-border: #2c3044;
+      --board-light: #e9e1cc;
+      --board-dark: #333d5c;
+      --board-frame: #0c0e16;
+      --accent-gold: #c9a24b;
+      --accent-good: #7fa985;
+      --accent-bad: #c17663;
+      --text-primary: #f1ecdf;
+      --text-muted: #9a98ab;
+      --select-ring: #c9a24b;
+      --dot-color: #e8b04a;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #12141c;
+    --panel: #1a1d2a;
+    --panel-border: #2c3044;
+    --board-light: #e9e1cc;
+    --board-dark: #333d5c;
+    --board-frame: #0c0e16;
+    --accent-gold: #c9a24b;
+    --accent-good: #7fa985;
+    --accent-bad: #c17663;
+    --text-primary: #f1ecdf;
+    --text-muted: #9a98ab;
+    --select-ring: #c9a24b;
+    --dot-color: #e8b04a;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  html, body { height: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: var(--sans);
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page { max-width: 980px; margin: 0 auto; padding: 40px 20px 64px; }
+
+  header.top { margin-bottom: 32px; }
+
+  .top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  header.top h1 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: clamp(28px, 4.5vw, 40px);
+    letter-spacing: -0.01em;
+    margin: 0 0 6px;
+    color: var(--text-primary);
+  }
+
+  header.top p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 15px;
+    max-width: 60ch;
+    line-height: 1.6;
+  }
+
+  .lang-toggle {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .lang-btn {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--panel-border);
+    background: var(--panel);
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+  .lang-btn.active {
+    border-color: var(--accent-gold);
+    color: var(--accent-gold);
+    font-weight: 600;
+  }
+  .lang-btn:focus-visible { outline: 2px solid var(--select-ring); outline-offset: 2px; }
+
+  [hidden] { display: none !important; }
+
+  .layout, .battle-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 260px;
+    gap: 28px;
+    align-items: start;
+  }
+  @media (max-width: 760px) {
+    .layout, .battle-layout { grid-template-columns: 1fr; }
+    .menu-grid { grid-template-columns: 1fr; }
+  }
+
+  .board-column { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+
+  .board-meta {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .difficulty-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text-muted);
+    border: 1px solid var(--panel-border);
+    border-radius: 999px;
+    padding: 4px 12px;
+    background: var(--panel);
+  }
+  .difficulty-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-gold); }
+  .difficulty-dot.easy { background: var(--accent-good); }
+  .difficulty-dot.hard { background: var(--accent-bad); }
+
+  .prompt-text { font-size: 15px; color: var(--text-primary); font-weight: 500; }
+
+  .board-frame {
+    position: relative;
+    background: var(--board-frame);
+    padding: 22px;
+    border-radius: 14px;
+    box-shadow: 0 18px 40px -22px rgba(0,0,0,0.45);
+  }
+
+  .board-inner { display: flex; gap: 8px; }
+
+  .rank-labels { display: flex; flex-direction: column; justify-content: space-around; }
+  .rank-labels span, .file-labels span {
+    color: rgba(255,255,255,0.55);
+    font-size: 12px;
+    font-family: var(--sans);
+    width: 16px;
+    text-align: center;
+  }
+
+  .board-main { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0; }
+
+  .board {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(8, 1fr);
+    aspect-ratio: 1 / 1;
+    width: 100%;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .file-labels { display: flex; justify-content: space-around; }
+
+  .sq {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    user-select: none;
+    touch-action: manipulation;
+  }
+  .sq.light { background: var(--board-light); }
+  .sq.dark { background: var(--board-dark); }
+
+  .sq.selected::after {
+    content: '';
+    position: absolute;
+    inset: 3px;
+    border: 2.5px solid var(--select-ring);
+    border-radius: 3px;
+    pointer-events: none;
+  }
+
+  .sq.flash-good { animation: flashGood 0.6s ease; }
+  .sq.flash-bad { animation: flashBad 0.5s ease; }
+  @keyframes flashGood {
+    0% { box-shadow: inset 0 0 0 999px rgba(127,169,133,0); }
+    35% { box-shadow: inset 0 0 0 999px rgba(127,169,133,0.55); }
+    100% { box-shadow: inset 0 0 0 999px rgba(127,169,133,0); }
+  }
+  @keyframes flashBad {
+    0% { box-shadow: inset 0 0 0 999px rgba(193,118,99,0); }
+    35% { box-shadow: inset 0 0 0 999px rgba(193,118,99,0.55); }
+    100% { box-shadow: inset 0 0 0 999px rgba(193,118,99,0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sq.flash-good, .sq.flash-bad { animation: none; }
+  }
+
+  .legal-dot {
+    position: absolute;
+    width: 26%;
+    height: 26%;
+    border-radius: 50%;
+    background: var(--dot-color);
+    box-shadow: 0 0 0 2px rgba(0,0,0,0.45), 0 0 0 3px rgba(255,255,255,0.35);
+    pointer-events: none;
+  }
+  .legal-dot.capture {
+    width: 76%;
+    height: 76%;
+    background: transparent;
+    border: 4px solid var(--dot-color);
+    box-shadow: 0 0 0 2px rgba(0,0,0,0.45), inset 0 0 0 2px rgba(255,255,255,0.3);
+  }
+
+  .piece {
+    font-size: clamp(24px, 5.2vw, 44px);
+    line-height: 1;
+    pointer-events: none;
+  }
+  .white-piece {
+    color: #fffaf0;
+    text-shadow:
+      -1.4px -1.4px 0 #14151d,
+      1.4px -1.4px 0 #14151d,
+      -1.4px 1.4px 0 #14151d,
+      1.4px 1.4px 0 #14151d,
+      0 3px 4px rgba(0,0,0,0.4);
+  }
+  .black-piece {
+    color: #0b0b10;
+    text-shadow:
+      -1px -1px 0 rgba(255,255,255,0.7),
+      1px -1px 0 rgba(255,255,255,0.7),
+      -1px 1px 0 rgba(255,255,255,0.7),
+      1px 1px 0 rgba(255,255,255,0.7),
+      0 3px 4px rgba(0,0,0,0.35);
+  }
+
+  .feedback { min-height: 26px; font-size: 14.5px; color: var(--text-muted); line-height: 1.5; }
+  .feedback.good { color: var(--accent-good); font-weight: 500; }
+  .feedback.bad { color: var(--accent-bad); font-weight: 500; }
+
+  .panel { display: flex; flex-direction: column; gap: 16px; }
+  .panel-card { background: var(--panel); border: 1px solid var(--panel-border); border-radius: 12px; padding: 18px 20px; }
+
+  .score-label { font-size: 12.5px; color: var(--text-muted); margin-bottom: 4px; }
+  .score-value { font-family: var(--serif); font-size: 34px; font-weight: 600; color: var(--accent-gold); line-height: 1; }
+
+  .progress-row { display: flex; justify-content: space-between; font-size: 13.5px; color: var(--text-muted); margin-top: 14px; }
+  .progress-bar { margin-top: 8px; height: 5px; border-radius: 999px; background: var(--panel-border); overflow: hidden; }
+  .progress-bar-fill { height: 100%; background: var(--accent-gold); border-radius: 999px; transition: width 0.3s ease; }
+
+  .controls { display: flex; flex-direction: column; gap: 8px; }
+
+  button {
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 500;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--panel-border);
+    background: var(--panel);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  button:hover { border-color: var(--accent-gold); }
+  button:focus-visible { outline: 2px solid var(--select-ring); outline-offset: 2px; }
+  button.primary { background: var(--accent-gold); border-color: var(--accent-gold); color: #1c1408; }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .next-row { display: none; }
+  .next-row.show { display: block; }
+
+  .done-card { display: none; text-align: center; padding: 28px 20px; }
+  .done-card.show { display: block; }
+  .done-card h2 { font-family: var(--serif); font-size: 26px; margin: 0 0 8px; }
+  .done-card p { color: var(--text-muted); font-size: 14.5px; margin: 0 0 18px; }
+
+  .menu-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; max-width: 980px; }
+  .menu-card {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+    text-align: left; padding: 30px 28px; border-radius: 16px;
+    background: var(--panel); border: 1px solid var(--panel-border);
+    transition: border-color 0.15s ease, transform 0.15s ease;
+  }
+  .menu-card:hover { border-color: var(--accent-gold); transform: translateY(-2px); }
+  @media (prefers-reduced-motion: reduce) { .menu-card:hover { transform: none; } }
+  .menu-icon { font-size: 44px; line-height: 1; }
+  .menu-title { font-family: var(--serif); font-size: 28px; font-weight: 600; color: var(--text-primary); }
+  .menu-desc { font-size: 14.5px; color: var(--text-muted); line-height: 1.55; font-weight: 400; }
+
+  .sq.last::before { content: ''; position: absolute; inset: 0; background: rgba(232,176,74,0.38); pointer-events: none; }
+  .sq.incheck { background-image: radial-gradient(circle at center, rgba(214,60,48,0.95) 0%, rgba(214,60,48,0.55) 45%, rgba(214,60,48,0) 78%); }
+
+  .turn-row { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 17px; }
+  .turn-dot { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--text-muted); flex-shrink: 0; }
+  .turn-dot.w { background: #fffaf0; }
+  .turn-dot.b { background: #14151d; }
+  .status-text { margin-top: 8px; font-size: 14px; color: var(--text-muted); min-height: 20px; line-height: 1.5; }
+  .status-text.alert { color: var(--accent-bad); font-weight: 600; }
+  .status-text.end { color: var(--accent-good); font-weight: 600; }
+  .cap-label { font-size: 12.5px; color: var(--text-muted); margin-top: 8px; }
+  .captured-row { display: flex; flex-wrap: wrap; gap: 2px; min-height: 28px; font-size: 22px; line-height: 1.2; }
+  .moves-box { max-height: 190px; overflow: auto; font-size: 13.5px; display: grid; gap: 4px; align-content: start; }
+  .move-row { display: grid; grid-template-columns: 26px 1fr 1fr; gap: 6px; }
+  .move-row .n { color: var(--text-muted); }
+  .moves-empty { color: var(--text-muted); font-size: 13.5px; }
+
+  .promo-overlay {
+    position: absolute; inset: 0; background: rgba(10,12,20,0.78); border-radius: 14px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; z-index: 5;
+  }
+  .promo-title { color: #f1ecdf; font-weight: 500; font-size: 15px; }
+  .promo-choices { display: flex; gap: 10px; }
+  .promo-choice { width: 64px; height: 64px; font-size: 40px; padding: 0; line-height: 1; border-radius: 12px; }
+  .promo-choice.on-dark { background: var(--board-dark); }
+  .promo-choice.on-light { background: var(--board-light); }
+
+  /* ---- Battle fullscreen / immersive mode (tablet) ---- */
+  body.bfull header.top { display: none; }
+  body.bfull .page { max-width: none; padding: 12px; }
+  body.bfull .battle-layout {
+    grid-template-columns: auto minmax(240px, 320px);
+    justify-content: center; align-items: center; gap: 20px;
+    min-height: calc(100vh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  }
+  body.bfull .board-frame { padding: 14px; width: min(calc(100vh - 24px), calc(100vw - 372px)); }
+  body.bfull .panel { gap: 10px; max-height: calc(100vh - 24px); overflow-y: auto; }
+  body.bfull .panel-card { padding: 12px 16px; }
+  body.bfull .moves-box { max-height: 110px; }
+  @supports (height: 100dvh) {
+    body.bfull .battle-layout { min-height: calc(100dvh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); }
+    body.bfull .board-frame { width: min(calc(100dvh - 24px), calc(100vw - 372px)); }
+    body.bfull .panel { max-height: calc(100dvh - 24px); }
+  }
+  @media (orientation: portrait) {
+    body.bfull .battle-layout { grid-template-columns: 1fr; justify-items: stretch; align-items: start; min-height: 0; }
+    body.bfull .board-column { align-items: center; }
+    body.bfull .board-frame { width: 100%; max-width: calc(100vh - 24px); }
+    body.bfull .panel { max-height: none; width: min(100%, 560px); margin: 0 auto; }
+    body.bfull .moves-box { max-height: 140px; }
+  }
+
+  /* ---- Study (lessons) ---- */
+  .lesson-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; max-width: 980px; }
+  .lesson-card {
+    position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: left;
+    padding: 18px 20px; border-radius: 14px; background: var(--panel); border: 1px solid var(--panel-border);
+  }
+  .lesson-card .ico { font-size: 30px; line-height: 1.1; }
+  .lesson-card .num { font-size: 12px; color: var(--text-muted); font-weight: 400; margin-top: 4px; }
+  .lesson-card .tt { font-size: 16px; font-weight: 600; color: var(--text-primary); }
+  .lesson-card .cnt { font-size: 12.5px; color: var(--text-muted); font-weight: 400; }
+  .lesson-card .chk { position: absolute; top: 12px; right: 14px; color: var(--accent-good); font-weight: 700; font-size: 18px; }
+  .lesson-text { font-size: 16px; line-height: 1.75; }
+  .task-box { margin-top: 12px; padding: 10px 12px; border-left: 4px solid var(--accent-gold); background: rgba(169,122,44,0.12); border-radius: 6px; font-size: 15px; font-weight: 500; line-height: 1.55; }
+  .page-count { font-size: 12.5px; color: var(--text-muted); margin-bottom: 8px; }
+  .sq.goal { box-shadow: inset 0 0 0 3px rgba(232,176,74,0.95); }
+  .sq.goal::before { content: '⭐'; position: absolute; top: 2px; right: 4px; font-size: clamp(12px, 2.2vw, 20px); line-height: 1; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="top">
+    <div class="top-row">
+      <div>
+        <h1 id="title-text">체스 묘수풀이</h1>
+        <p id="subtitle-text"></p>
+      </div>
+      <div class="lang-toggle">
+        <button id="home-btn" class="lang-btn" type="button" hidden></button>
+        <button id="lang-ko" class="lang-btn" type="button">한국어</button>
+        <button id="lang-en" class="lang-btn" type="button">English</button>
+      </div>
+    </div>
+  </header>
+
+  <div id="view-menu">
+    <div class="menu-grid">
+      <button id="menu-study" class="menu-card" type="button">
+        <span class="menu-icon">📚</span>
+        <span class="menu-title" id="menu-study-title"></span>
+        <span class="menu-desc" id="menu-study-desc"></span>
+      </button>
+      <button id="menu-quiz" class="menu-card" type="button">
+        <span class="menu-icon">🧩</span>
+        <span class="menu-title" id="menu-quiz-title"></span>
+        <span class="menu-desc" id="menu-quiz-desc"></span>
+      </button>
+      <button id="menu-battle" class="menu-card" type="button">
+        <span class="menu-icon">⚔️</span>
+        <span class="menu-title" id="menu-battle-title"></span>
+        <span class="menu-desc" id="menu-battle-desc"></span>
+      </button>
+    </div>
+  </div>
+
+  <div id="view-quiz" hidden>
+  <div class="layout">
+    <div class="board-column">
+      <div class="board-meta">
+        <span class="difficulty-badge"><span id="diff-dot" class="difficulty-dot"></span><span id="diff-label"></span></span>
+        <span class="prompt-text" id="prompt-text"></span>
+      </div>
+
+      <div class="board-frame">
+        <div class="board-inner">
+          <div class="rank-labels" id="rank-labels"></div>
+          <div class="board-main">
+            <div class="board" id="board"></div>
+            <div class="file-labels" id="file-labels"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+    </div>
+
+    <aside class="panel">
+      <div class="panel-card">
+        <div class="score-label" id="score-label-text"></div>
+        <div class="score-value" id="score">0</div>
+        <div class="progress-row">
+          <span id="progress-text">1 / 20</span>
+          <span id="turn-note-inline"></span>
+        </div>
+        <div class="progress-bar"><div class="progress-bar-fill" id="progress-fill" style="width:0%"></div></div>
+      </div>
+
+      <div class="panel-card controls">
+        <button id="hint-btn" type="button"></button>
+        <button id="reveal-btn" type="button"></button>
+        <div class="next-row" id="next-row">
+          <button id="next-btn" class="primary" type="button"></button>
+        </div>
+        <button id="reset-btn" type="button"></button>
+      </div>
+    </aside>
+  </div>
+
+  <div class="panel-card done-card" id="done-card">
+    <h2 id="done-title"></h2>
+    <p id="done-summary"></p>
+    <button id="restart-btn" class="primary" type="button"></button>
+  </div>
+  </div>
+
+  <div id="view-study" hidden>
+    <div id="study-list"><div class="lesson-grid" id="lesson-grid"></div></div>
+    <div id="study-lesson" hidden>
+      <div class="battle-layout">
+        <div class="board-column">
+          <div class="board-frame">
+            <div class="board-inner">
+              <div class="rank-labels" id="s-rank-labels"></div>
+              <div class="board-main">
+                <div class="board" id="s-board"></div>
+                <div class="file-labels" id="s-file-labels"></div>
+              </div>
+            </div>
+            <div class="promo-overlay" id="s-promo-overlay" hidden>
+              <div class="promo-title" id="s-promo-title"></div>
+              <div class="promo-choices" id="s-promo-choices"></div>
+            </div>
+          </div>
+        </div>
+        <aside class="panel">
+          <div class="panel-card">
+            <div class="score-label" id="s-lesson-title"></div>
+            <div class="page-count" id="s-page-count"></div>
+            <div class="lesson-text" id="s-text"></div>
+            <div class="task-box" id="s-task" hidden></div>
+            <div class="status-text" id="s-feedback" aria-live="polite"></div>
+          </div>
+          <div class="panel-card controls">
+            <button id="s-next" class="primary" type="button"></button>
+            <button id="s-skip" type="button"></button>
+            <button id="s-retry" type="button"></button>
+            <button id="s-prev" type="button"></button>
+            <button id="s-list" type="button"></button>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </div>
+
+  <div id="view-battle" hidden>
+    <div class="battle-layout">
+      <div class="board-column">
+        <div class="board-frame">
+          <div class="board-inner">
+            <div class="rank-labels" id="b-rank-labels"></div>
+            <div class="board-main">
+              <div class="board" id="b-board"></div>
+              <div class="file-labels" id="b-file-labels"></div>
+            </div>
+          </div>
+          <div class="promo-overlay" id="promo-overlay" hidden>
+            <div class="promo-title" id="promo-title"></div>
+            <div class="promo-choices" id="promo-choices"></div>
+          </div>
+        </div>
+      </div>
+      <aside class="panel">
+        <div class="panel-card">
+          <div class="turn-row"><span class="turn-dot w" id="b-turn-dot"></span><span id="b-turn-text"></span></div>
+          <div class="status-text" id="b-status" aria-live="polite"></div>
+        </div>
+        <div class="panel-card">
+          <div class="score-label" id="b-captured-title"></div>
+          <div class="cap-label" id="b-cap-w-label"></div>
+          <div class="captured-row" id="b-cap-w"></div>
+          <div class="cap-label" id="b-cap-b-label"></div>
+          <div class="captured-row" id="b-cap-b"></div>
+        </div>
+        <div class="panel-card">
+          <div class="score-label" id="b-moves-title"></div>
+          <div class="moves-box" id="b-moves"></div>
+        </div>
+        <div class="panel-card controls">
+          <button id="b-full" class="primary" type="button"></button>
+          <button id="b-new" type="button"></button>
+          <button id="b-undo" type="button"></button>
+          <button id="b-flip" type="button"></button>
+        </div>
+      </aside>
+    </div>
+  </div>
+</div>
+
+<script>
+const ALL_PUZZLES = [
+  {fen:"k5b1/pp1R4/8/8/6K1/8/8/2n5 w - - 0 1",solution:["d7d8"],kind:"mate",difficulty:"easy"},
+  {fen:"3RK1N1/8/8/3b4/8/8/pp6/k7 w - - 0 1",solution:["d8d5"],kind:"free_capture",difficulty:"easy"},
+  {fen:"4k3/3pp3/8/8/8/2Kb4/1R6/4n3 w - - 0 1",solution:["c3d2"],kind:"fork",difficulty:"easy"},
+  {fen:"8/8/8/8/3k4/8/1R4K1/1b3B2 w - - 0 1",solution:["b2b4","b2b1"],kind:"fork_check",difficulty:"easy"},
+  {fen:"7k/6pp/8/8/Q2K4/6b1/4b3/8 w - - 0 1",solution:["a4e8"],kind:"mate",difficulty:"easy"},
+  {fen:"7k/6pp/8/8/7B/6K1/8/3r3R w - - 0 1",solution:["h1d1"],kind:"free_capture",difficulty:"easy"},
+  {fen:"8/8/5K2/k6b/5N2/3R4/8/8 w - - 0 1",solution:["d3d5","f4h5"],kind:"fork_check",difficulty:"easy"},
+  {fen:"8/8/7p/2N5/8/8/ppK5/k7 w - - 0 1",solution:["c5b3"],kind:"mate",difficulty:"easy"},
+  {fen:"8/8/6R1/4K3/6b1/8/6pp/7k w - - 0 1",solution:["g6g4"],kind:"free_capture",difficulty:"easy"},
+  {fen:"8/1k4p1/8/8/4R1N1/1b1K4/8/8 w - - 0 1",solution:["e4b4"],kind:"fork_check",difficulty:"easy"},
+  {fen:"7k/3K2pp/8/8/8/8/1n3R2/8 w - - 0 1",solution:["f2f8"],kind:"mate",difficulty:"easy"},
+  {fen:"8/2r3R1/3K4/8/8/7r/6pp/6k1 w - - 0 1",solution:["d6c7","g7c7"],kind:"free_capture",difficulty:"easy"},
+  {fen:"8/4k3/8/8/8/1n3R2/6K1/8 w - - 0 1",solution:["f3e3","f3b3"],kind:"fork_check",difficulty:"easy"},
+  {fen:"2k5/1ppp3Q/8/1K6/8/6b1/8/8 w - - 0 1",solution:["h7g8","h7h8"],kind:"mate",difficulty:"easy"},
+  {fen:"3kN3/3pp3/8/8/2nK4/8/8/5Q2 w - - 0 1",solution:["d4c4","f1c4"],kind:"free_capture",difficulty:"easy"},
+  {fen:"7k/K5pp/8/5p2/5R2/8/4Q3/8 w - - 0 1",solution:["e2e8"],kind:"mate",difficulty:"easy"},
+  {fen:"1k6/pp6/8/4q3/8/8/7B/1NK5 w - - 0 1",solution:["h2e5"],kind:"free_capture",difficulty:"easy"},
+  {fen:"8/7K/8/b3b3/8/8/1B4pp/7k w - - 0 1",solution:["b2e5"],kind:"free_capture",difficulty:"easy"},
+  {fen:"8/8/8/8/8/7K/2k3nR/8 w - - 0 1",solution:["h3g2","h2g2"],kind:"free_capture",difficulty:"easy"},
+  {fen:"8/7R/4b2n/8/3K4/7k/8/3N4 w - - 0 1",solution:["h7h6"],kind:"free_capture",difficulty:"easy"},
+  {fen:"8/2k3K1/7r/8/8/8/N5b1/4N3 w - - 0 1",solution:["g7h6"],kind:"free_capture",difficulty:"easy"},
+  {fen:"8/8/2R5/8/8/8/pp2bK2/k2B4 w - - 0 1",solution:["f2e2","d1e2"],kind:"free_capture",difficulty:"easy"},
+  {fen:"3r4/8/8/2Bk4/8/5K2/6r1/5N2 w - - 0 1",solution:["f3g2","f1e3"],kind:"free_capture",difficulty:"easy"},
+  {fen:"8/8/7K/4n3/8/1B6/8/B4kb1 w - - 0 1",solution:["a1e5"],kind:"free_capture",difficulty:"easy"},
+  {fen:"8/8/8/2k5/1r6/4K1b1/8/6R1 w - - 0 1",solution:["g1g3"],kind:"free_capture",difficulty:"easy"},
+  {fen:"k4K2/pp6/8/8/5N2/6Q1/6n1/8 w - - 0 1",solution:["f4g2","g3g2"],kind:"free_capture",difficulty:"easy"},
+  {fen:"N7/n1R3b1/8/1qp5/p5K1/8/8/N4k2 w - - 0 1",solution:["c7e7","c7f7"],kind:"fork",difficulty:"medium"},
+  {fen:"8/K6B/2B5/2p5/8/5b2/ppp2n2/bk6 w - - 0 1",solution:["c6f3"],kind:"free_capture",difficulty:"medium"},
+  {fen:"4N3/5k2/8/5b1n/8/8/Kp6/3R4 w - - 0 1",solution:["e8d6"],kind:"fork_check",difficulty:"medium"},
+  {fen:"1K3k2/4ppp1/8/7r/4p2N/3R4/4n3/8 w - - 0 1",solution:["d3d8"],kind:"mate",difficulty:"medium"},
+  {fen:"8/5KQ1/2n1r3/8/8/8/5Bpp/4q2k w - - 0 1",solution:["f2e1"],kind:"good_trade",difficulty:"medium"},
+  {fen:"7K/8/1bn5/5Q2/4B3/8/pppp3b/1k6 w - - 0 1",solution:["f5b5"],kind:"fork",difficulty:"medium"},
+  {fen:"k3K3/8/5B2/N3b3/7q/8/8/2r1n3 w - - 0 1",solution:["f6h4"],kind:"free_capture",difficulty:"medium"},
+  {fen:"4k3/8/4b3/1n6/2R4K/b7/1r1p2Q1/8 w - - 0 1",solution:["g2c6"],kind:"fork_check",difficulty:"medium"},
+  {fen:"2n2q2/8/8/p5KQ/8/8/1p1ppp2/3Bk3 w - - 0 1",solution:["h5e2"],kind:"mate",difficulty:"medium"},
+  {fen:"1B4R1/2q5/8/7K/8/2rp1k2/nB6/8 w - - 0 1",solution:["b8c7"],kind:"good_trade",difficulty:"medium"},
+  {fen:"8/4p2Q/k2b3n/8/3p4/8/2K5/6N1 w - - 0 1",solution:["h7g6"],kind:"fork",difficulty:"medium"},
+  {fen:"R7/3p2k1/2Nq4/4b2K/8/1n6/8/1Q6 w - - 0 1",solution:["b1b3"],kind:"free_capture",difficulty:"medium"},
+  {fen:"8/1k6/8/1N1K4/2r1Q3/8/1n4b1/q7 w - - 0 1",solution:["b5d6"],kind:"fork_check",difficulty:"medium"},
+  {fen:"1k6/ppp5/5Q2/4b1K1/6p1/6R1/8/5rq1 w - - 0 1",solution:["f6d8"],kind:"mate",difficulty:"medium"},
+  {fen:"1b4k1/6pp/7q/5N1R/6K1/3b1Np1/8/8 w - - 0 1",solution:["f5h6"],kind:"good_trade",difficulty:"medium"},
+  {fen:"8/8/3p1k2/4n3/6B1/1QKb4/8/2n4r w - - 0 1",solution:["b3d5"],kind:"fork",difficulty:"medium"},
+  {fen:"3k4/2ppp2q/K7/8/2r1B3/4R3/1p2r3/8 w - - 0 1",solution:["e4h7"],kind:"free_capture",difficulty:"medium"},
+  {fen:"8/5R2/8/7q/2K5/4Q1N1/3rnppp/6k1 w - - 0 1",solution:["e3f2"],kind:"mate",difficulty:"medium"},
+  {fen:"k6B/pp4p1/5p2/KN3Rq1/8/3n4/8/8 w - - 0 1",solution:["f5g5"],kind:"good_trade",difficulty:"medium"},
+  {fen:"8/8/5n2/8/3Kb3/R6B/r5pp/6k1 w - - 0 1",solution:["d4e5"],kind:"fork",difficulty:"medium"},
+  {fen:"3kN3/2p1p3/pR6/8/4r3/K1B5/4b3/4b3 w - - 0 1",solution:["c3e1"],kind:"free_capture",difficulty:"medium"},
+  {fen:"k1r5/pp1n1N2/8/8/4r3/8/5N1K/3R4 w - - 0 1",solution:["f7d6"],kind:"fork",difficulty:"medium"},
+  {fen:"8/1R6/2p5/2r5/7N/r7/3pppn1/4k2K w - - 0 1",solution:["h1g2","h4g2"],kind:"free_capture",difficulty:"medium"},
+  {fen:"1r2b3/R7/7R/8/4n2B/8/2ppK3/2k5 w - - 0 1",solution:["h6e6","a7e7"],kind:"fork",difficulty:"medium"},
+  {fen:"8/5N2/3B4/8/4k1bK/b6p/6q1/6rR w - - 0 1",solution:["d6a3"],kind:"free_capture",difficulty:"medium"},
+  {fen:"1R1b3k/r5pp/8/7K/6nb/4r3/4Q3/8 w - - 0 1",solution:["e2d2"],kind:"fork",difficulty:"medium"},
+  {fen:"8/8/q2pn3/4N3/6B1/5p2/2Kppp2/4k3 w - - 0 1",solution:["g4e6"],kind:"free_capture",difficulty:"medium"},
+  {fen:"2n3r1/1Kp2b2/6k1/1N5b/8/B7/1n4Br/2N5 w - - 0 1",solution:["a3b2"],kind:"free_capture",difficulty:"hard"},
+  {fen:"Q4bK1/p7/1r6/4B1p1/4b1kN/2n5/3r4/q7 w - - 0 1",solution:["a8c8"],kind:"fork_check",difficulty:"hard"},
+  {fen:"8/3p2r1/K7/b5k1/3bqr2/n1N4R/3n2p1/5B2 w - - 0 1",solution:["c3e4"],kind:"good_trade",difficulty:"hard"},
+  {fen:"1n4r1/5Q2/3b4/4k2p/3r4/1K5B/2Rp4/3q4 w - - 0 1",solution:["f7f5"],kind:"mate",difficulty:"hard"},
+  {fen:"RrQ2n2/4B3/p2b4/3r2n1/3b4/2p5/2q1k3/7K w - - 0 1",solution:["c8c6","c8c4"],kind:"fork",difficulty:"hard"},
+  {fen:"1K6/1BN5/3n4/8/8/k5p1/1b2bpnR/6Br w - - 0 1",solution:["h2h1"],kind:"free_capture",difficulty:"hard"},
+  {fen:"b1k5/1pppK3/Q2p1Rb1/2r5/2nr4/B7/7R/6q1 w - - 0 1",solution:["a6a8"],kind:"mate",difficulty:"hard"},
+  {fen:"3N4/1n4p1/6p1/1b2r3/5K2/rk6/8/n5Q1 w - - 0 1",solution:["g1d4","g1c1"],kind:"fork",difficulty:"hard"},
+  {fen:"7b/5p1Q/1K1br3/3kp3/7N/8/3r4/5B2 w - - 0 1",solution:["h7h8"],kind:"free_capture",difficulty:"hard"},
+  {fen:"7k/1p4pp/8/1n2NR2/3p3K/8/3rQ3/q1r5 w - - 0 1",solution:["f5f8"],kind:"mate",difficulty:"hard"},
+  {fen:"b4Q2/k2pR3/p3N1b1/1q6/4r1n1/3n4/6r1/K7 w - - 0 1",solution:["e6c7"],kind:"fork",difficulty:"hard"},
+  {fen:"1N6/1r3np1/1p6/7b/1BKRn3/q5b1/2Qppp2/4k1r1 w - - 0 1",solution:["b4a3"],kind:"free_capture",difficulty:"hard"},
+  {fen:"3B4/6R1/K1n4r/8/3N3b/1r6/ppp4b/kB6 w - - 0 1",solution:["d4f5"],kind:"fork",difficulty:"hard"},
+  {fen:"1R6/7K/Nq3k2/1bp1p3/4n3/3B4/3n4/2R5 w - - 0 1",solution:["b8b6"],kind:"free_capture",difficulty:"hard"},
+  {fen:"8/2n5/1r6/3Q4/5b2/8/2qpppR1/1b2k1nK w - - 0 1",solution:["d5d4"],kind:"fork",difficulty:"hard"},
+  {fen:"2b1K3/3n3q/2b5/1N4r1/2r4R/2R2Bk1/5p1p/8 w - - 0 1",solution:["h4h7"],kind:"free_capture",difficulty:"hard"},
+  {fen:"4r3/7n/2p3Q1/4q3/8/6r1/2K1Bnpp/RR3b1k w - - 0 1",solution:["g6f7"],kind:"fork",difficulty:"hard"},
+  {fen:"2krn3/1ppp3p/b3B1R1/3Q4/1R4n1/5K2/3q4/7r w - - 0 1",solution:["d5d2"],kind:"free_capture",difficulty:"hard"},
+  {fen:"5nr1/3b4/1p2k3/2p5/2n3rq/RK2bB2/N7/8 w - - 0 1",solution:["f3e2"],kind:"fork",difficulty:"hard"},
+  {fen:"8/3b4/3K1b2/6N1/2r5/3nqR2/pr4pp/7k w - - 0 1",solution:["f3e3"],kind:"free_capture",difficulty:"hard"},
+  {fen:"1r1Q4/6K1/8/2rb2b1/2pN4/2R5/3q2pp/7k w - - 0 1",solution:["d8d6"],kind:"fork",difficulty:"hard"},
+  {fen:"4n3/1q3Q2/6B1/bn5p/1p5k/8/8/6K1 w - - 0 1",solution:["f7b7"],kind:"free_capture",difficulty:"hard"},
+  {fen:"q7/1n2B1p1/1K6/2r5/4R2b/4B3/ppp3b1/1k1n4 w - - 0 1",solution:["e4g4","e4d4"],kind:"fork",difficulty:"hard"},
+  {fen:"3k4/n1pppq2/R5b1/4Kp1r/1b6/3N4/1p5r/7n w - - 0 1",solution:["d3f4"],kind:"fork",difficulty:"hard"},
+  {fen:"1r6/8/3pB1K1/q1n5/p3QNN1/2r5/6pp/5b1k w - - 0 1",solution:["e4d4","e4e1"],kind:"fork",difficulty:"hard"},
+  {fen:"8/5B2/8/8/8/3K4/2pn4/k7 w - - 0 1",solution:["d3d2"],kind:"free_capture",difficulty:"easy"},
+  {fen:"2k5/1ppp4/8/7n/8/3K4/8/3B4 w - - 0 1",solution:["d1h5"],kind:"free_capture",difficulty:"easy"},
+  {fen:"8/1N6/8/K5p1/1n6/8/8/1k6 w - - 0 1",solution:["a5b4"],kind:"free_capture",difficulty:"easy"},
+  {fen:"8/8/8/3K4/7r/8/2b3N1/6k1 w - - 0 1",solution:["g2h4"],kind:"free_capture",difficulty:"easy"},
+  {fen:"7k/6pp/8/8/8/R4K1p/3b4/8 w - - 0 1",solution:["a3a8"],kind:"mate",difficulty:"easy"},
+  {fen:"4K3/8/8/7n/8/8/3qR3/k7 w - - 0 1",solution:["e2d2"],kind:"free_capture",difficulty:"easy"},
+  {fen:"2k1b3/1p1p2B1/8/8/4RK2/8/8/8 w - - 0 1",solution:["e4e8"],kind:"free_capture",difficulty:"easy"},
+  {fen:"8/RB6/8/8/1k2K3/3r4/8/8 w - - 0 1",solution:["e4d3"],kind:"free_capture",difficulty:"easy"},
+  {fen:"1k6/p1p5/4b1R1/n1p2QB1/8/8/2K5/6b1 w - - 0 1",solution:["g6e6","f5e6"],kind:"free_capture",difficulty:"medium"},
+  {fen:"5rb1/1N6/4k3/n2R4/4K3/r7/3R4/8 w - - 0 1",solution:["d5g5"],kind:"fork",difficulty:"medium"},
+  {fen:"8/3Qnk2/N1p5/8/K7/7b/8/8 w - - 0 1",solution:["d7h3"],kind:"free_capture",difficulty:"medium"},
+  {fen:"N7/8/1Kp5/8/8/1br5/2Q1pp2/r2n1k2 w - - 0 1",solution:["c2d2"],kind:"fork",difficulty:"medium"},
+  {fen:"8/b3R1p1/8/1K1N4/3r4/8/2pp4/3k2q1 w - - 0 1",solution:["e7a7"],kind:"free_capture",difficulty:"medium"},
+  {fen:"4b3/8/2n4k/B7/8/Q3b3/4K3/8 w - - 0 1",solution:["a3c3"],kind:"fork",difficulty:"medium"},
+  {fen:"5N2/B1q2p2/K4N2/R7/1brpr3/n7/k7/n3b3 w - - 0 1",solution:["f6d5"],kind:"fork",difficulty:"hard"},
+  {fen:"4nk2/4ppp1/1p5n/4K3/1b6/1R6/5Q2/1b3q1R w - - 0 1",solution:["h1f1","f2f1"],kind:"free_capture",difficulty:"hard"},
+  {fen:"3b4/8/Q3K3/bn3Br1/8/8/3n1ppp/1r4k1 w - - 0 1",solution:["f5d3"],kind:"fork",difficulty:"hard"},
+  {fen:"3k3b/2p1p3/6rp/2r5/8/RK2n3/N3n3/1Nb2R2 w - - 0 1",solution:["f1e1"],kind:"fork",difficulty:"hard"},
+  {fen:"7B/n2p3q/7Q/5br1/1R6/1p3Kbr/pppR4/1k6 w - - 0 1",solution:["f3g2","h6f6"],kind:"fork",difficulty:"hard"},
+  {fen:"2r5/4NN2/5q2/4Q1br/2p5/K5p1/5n2/R2n3k w - - 0 1",solution:["e5e2"],kind:"fork",difficulty:"hard"},
+  {fen:"N2b1r2/q2Q4/1bn5/6r1/5p2/4Bp2/5ppp/1K4k1 w - - 0 1",solution:["d7d1"],kind:"mate",difficulty:"hard"},
+  {fen:"1R2b3/5qb1/K1kr4/1r1p3n/8/2N5/1n2p3/8 w - - 0 1",solution:["b8c8"],kind:"fork_check",difficulty:"hard"}
+];
+
+(function () {
+  const STRINGS = {
+    ko: {
+      title: '체스 묘수풀이',
+      subtitle: '체스판에서 가장 멋진 수를 찾아보세요! 기물을 콕 누르면 어디로 갈 수 있는지 알려줘요. 시간 제한이 없으니 천천히 생각해도 괜찮아요.',
+      scoreLabel: '점수',
+      hintBtn: '힌트 보기',
+      revealBtn: '정답 보기',
+      nextBtn: '다음 문제 →',
+      resetBtn: '처음부터 다시',
+      restartBtn: '다시 도전하기',
+      doneTitle: '모든 문제를 풀었습니다',
+      doneSummary: function (score, total) { return '총 ' + total + '문제 중 ' + score + '점을 획득했습니다.'; },
+      whiteTurn: '당신은 백입니다',
+      blackTurn: '당신은 흑입니다',
+      correct: function (piece, from, to, pts) { return '정답이에요! 정말 잘 찾았어요 👏 ' + piece + ' ' + from + ' → ' + to + ' (+' + pts + '점)'; },
+      wrong: function (penalty) { return '아깝다! 다시 한번 잘 살펴볼까요? (-' + penalty + '점)'; },
+      revealText: function (piece, from, to) { return '정답은 ' + piece + ' ' + from + ' → ' + to + '예요. 다음엔 꼭 스스로 찾아봐요! (점수 없음)'; },
+      hintText: function (body) { return '힌트: ' + body; },
+      diff: { easy: '쉬움', medium: '보통', hard: '어려움' },
+      home: '← 처음으로',
+      menuTitle: '체스 놀이터',
+      menuSubtitle: '하고 싶은 걸 골라보세요!',
+      menuQuizTitle: '퀴즈',
+      menuQuizDesc: '묘수풀이 문제 20개를 풀면서 점수를 모아요.',
+      menuBattleTitle: '대결',
+      menuBattleDesc: '친구와 한 화면에서 번갈아 두는 1대1 체스예요.',
+      battleTitle: '체스 대결',
+      battleSubtitle: '친구와 번갈아 가며 두어요. 흰색이 먼저 시작해요. 기물을 콕 누르면 갈 수 있는 칸이 보여요.',
+      turnWhite: '백 차례', turnBlack: '흑 차례', gameOver: '게임 끝',
+      inCheck: '체크! 킹을 지켜야 해요!',
+      checkmate: function (w) { return '체크메이트! ' + (w === 'w' ? '백' : '흑') + '이 이겼어요 🎉'; },
+      stalemate: '스테일메이트! 움직일 수 없지만 체크는 아니라서 무승부예요.',
+      drawMaterial: '기물이 부족해서 무승부예요.',
+      drawFifty: '50수 동안 변화가 없어서 무승부예요.',
+      fullscreen: '전체화면으로 하기', exitFullscreen: '전체화면 해제',
+
+      menuStudyTitle: '공부', menuStudyDesc: '체스가 처음이어도 괜찮아요! 기물이 움직이는 방법부터 차근차근 배워요.',
+      studyTitle: '체스 공부', studySubtitle: '레슨을 골라 차근차근 배워봐요. 직접 기물을 움직여 보면서 익히는 거예요!',
+      lessonLabel: function (n) { return '레슨 ' + n; },
+      pageCount: function (i, n) { return (i + 1) + ' / ' + n + ' 쪽'; },
+      lessonPages: function (n) { return n + '쪽'; },
+      missionLabel: '미션', prevPage: '← 이전', nextPage: '다음 →', finishLesson: '레슨 마치기 ✓',
+      skipPage: '건너뛰기', retryPage: '다시 해보기', lessonList: '레슨 목록', nextLesson: '다음 레슨 →',
+      lessonDoneTitle: '레슨 완료! 🎉',
+      lessonDoneText: function (title) { return '"' + title + '" 레슨을 모두 마쳤어요. 정말 잘했어요!'; },
+      allDone: '모든 레슨을 마쳤어요! 이제 퀴즈와 대결에 도전해볼까요? 🏆',
+      tapOther: function (name, goal) { return '이 칸의 이름은 ' + name + '예요. ' + goal + ' 칸을 찾아보세요!'; },
+      exploreProgress: function (n) { return '(' + n + '/6)'; },
+      defaultWrong: '아쉬워요! 다시 한번 해볼까요?',
+      escapeKing: '① 킹이 피했어요! 체크에서 벗어났어요.',
+      escapeCapture: '② 공격하던 룩을 잡았어요! 멋져요.',
+      escapeBlock: '③ 사이를 막았어요! 체크에서 벗어났어요.',
+      newGame: '새 게임', undo: '한 수 무르기', flip: '보드 뒤집기',
+      movesTitle: '기보', capturedTitle: '잡은 기물',
+      capByWhite: '백이 잡음', capByBlack: '흑이 잡음',
+      promoTitle: '어떤 기물로 바꿀까요?', noMoves: '아직 둔 수가 없어요.',
+      pieces: { P: '폰', N: '나이트', B: '비숍', R: '룩', Q: '퀸', K: '킹' },
+      kindPrompt: {
+        mate: '상대 킹을 꼼짝 못 하게 만드는 수를 찾아보세요! 🏆',
+        free_capture: '아무도 지키지 않는 상대 기물을 공짜로 잡아보세요! 🎯',
+        good_trade: '더 힘센 기물과 바꿀 수 있는 수를 찾아보세요! ⚖️',
+        fork: '한 번에 기물 두 개를 동시에 노려보세요! 🍴',
+        fork_check: '체크를 하면서 동시에 다른 기물도 노려보세요! ⚡'
+      },
+      kindHint: function (kind, pieceName) {
+        const map = {
+          mate: pieceName + '이 움직이면 상대 킹이 도망갈 칸이 하나도 없어져요. 킹 주변 칸을 하나씩 세어보세요!',
+          free_capture: pieceName + '이 갈 수 있는 칸 중에, 아무도 지켜주지 않는 상대 기물이 있어요. 잘 찾아보세요!',
+          good_trade: pieceName + '로 나보다 더 힘센 기물을 잡을 수 있어요. 나중에 내 기물을 잃어도 결국 이득이에요!',
+          fork: pieceName + '이 한 번만 움직여도 두 개의 기물을 동시에 노릴 수 있는 자리가 있어요. 어디일까요?',
+          fork_check: pieceName + '로 체크를 하면서 동시에 다른 기물도 공격해보세요. 상대는 둘 다 지킬 수 없어요!'
+        };
+        return map[kind] || '기물들이 어디로 움직일 수 있는지 하나씩 확인해보세요.';
+      }
+    },
+    en: {
+      title: 'Chess Puzzle Trainer',
+      subtitle: "Find the coolest move on the board! Tap a piece to see where it can go. There's no timer, so take all the time you need.",
+      scoreLabel: 'Score',
+      hintBtn: 'Show hint',
+      revealBtn: 'Reveal answer',
+      nextBtn: 'Next puzzle →',
+      resetBtn: 'Restart',
+      restartBtn: 'Try again',
+      doneTitle: 'You solved every puzzle',
+      doneSummary: function (score, total) { return 'You scored ' + score + ' points out of ' + total + ' puzzles.'; },
+      whiteTurn: 'You are playing White',
+      blackTurn: 'You are playing Black',
+      correct: function (piece, from, to, pts) { return 'Correct! Great job 👏 ' + piece + ' ' + from + ' → ' + to + ' (+' + pts + ' pts)'; },
+      wrong: function (penalty) { return 'So close! Take another look. (-' + penalty + ' pts)'; },
+      revealText: function (piece, from, to) { return 'The answer was ' + piece + ' ' + from + ' → ' + to + '. Try to find it yourself next time! (no points)'; },
+      hintText: function (body) { return 'Hint: ' + body; },
+      diff: { easy: 'Easy', medium: 'Medium', hard: 'Hard' },
+      home: '← Home',
+      menuTitle: 'Chess Playground',
+      menuSubtitle: 'Pick what you want to do!',
+      menuQuizTitle: 'Quiz',
+      menuQuizDesc: 'Solve 20 chess puzzles and collect points.',
+      menuBattleTitle: 'Battle',
+      menuBattleDesc: 'A 1-vs-1 chess game, taking turns on the same screen.',
+      battleTitle: 'Chess Battle',
+      battleSubtitle: 'Take turns with a friend. White moves first. Tap a piece to see where it can go.',
+      turnWhite: "White's turn", turnBlack: "Black's turn", gameOver: 'Game over',
+      inCheck: 'Check! Protect your king!',
+      checkmate: function (w) { return 'Checkmate! ' + (w === 'w' ? 'White' : 'Black') + ' wins 🎉'; },
+      stalemate: "Stalemate! No legal moves, but not in check — it's a draw.",
+      drawMaterial: 'Not enough pieces left to win — it\'s a draw.',
+      drawFifty: 'No progress for 50 moves — it\'s a draw.',
+      fullscreen: 'Play fullscreen', exitFullscreen: 'Exit fullscreen',
+
+      menuStudyTitle: 'Study', menuStudyDesc: 'New to chess? No problem! Learn step by step, starting with how each piece moves.',
+      studyTitle: 'Chess Study', studySubtitle: 'Pick a lesson and learn step by step. You will practice by moving the pieces yourself!',
+      lessonLabel: function (n) { return 'Lesson ' + n; },
+      pageCount: function (i, n) { return 'Page ' + (i + 1) + ' / ' + n; },
+      lessonPages: function (n) { return n + (n === 1 ? ' page' : ' pages'); },
+      missionLabel: 'Mission', prevPage: '← Back', nextPage: 'Next →', finishLesson: 'Finish lesson ✓',
+      skipPage: 'Skip', retryPage: 'Try again', lessonList: 'All lessons', nextLesson: 'Next lesson →',
+      lessonDoneTitle: 'Lesson complete! 🎉',
+      lessonDoneText: function (title) { return 'You finished the lesson "' + title + '". Great job!'; },
+      allDone: 'You finished every lesson! Ready to try the Quiz and the Battle? 🏆',
+      tapOther: function (name, goal) { return "That square is called " + name + ". Can you find " + goal + "?"; },
+      exploreProgress: function (n) { return '(' + n + '/6)'; },
+      defaultWrong: 'Not quite! Want to try again?',
+      escapeKing: '① The king stepped away! Out of check.',
+      escapeCapture: '② You captured the attacking rook! Nice.',
+      escapeBlock: '③ You blocked the attack! Out of check.',
+      newGame: 'New game', undo: 'Undo move', flip: 'Flip board',
+      movesTitle: 'Moves', capturedTitle: 'Captured pieces',
+      capByWhite: 'Captured by White', capByBlack: 'Captured by Black',
+      promoTitle: 'Promote to which piece?', noMoves: 'No moves yet.',
+      pieces: { P: 'Pawn', N: 'Knight', B: 'Bishop', R: 'Rook', Q: 'Queen', K: 'King' },
+      kindPrompt: {
+        mate: 'Trap the enemy king so it cannot escape! 🏆',
+        free_capture: 'Capture a piece that nobody is protecting! 🎯',
+        good_trade: 'Find a trade that wins you a stronger piece! ⚖️',
+        fork: 'Attack two pieces at the same time! 🍴',
+        fork_check: 'Give check while also attacking another piece! ⚡'
+      },
+      kindHint: function (kind, pieceName) {
+        const map = {
+          mate: 'Once your ' + pieceName.toLowerCase() + ' moves, the enemy king will have nowhere to run. Count the squares around the king!',
+          free_capture: 'Your ' + pieceName.toLowerCase() + ' can reach a piece that nobody is guarding. Can you spot it?',
+          good_trade: 'Your ' + pieceName.toLowerCase() + ' can capture something worth more than itself — even if it gets captured back, you still come out ahead!',
+          fork: 'One move with your ' + pieceName.toLowerCase() + ' can attack two pieces at once. Where could that be?',
+          fork_check: 'Give check with your ' + pieceName.toLowerCase() + ' while also attacking another piece — they can only save one!'
+        };
+        return map[kind] || 'Look carefully at where each piece can move.';
+      }
+    }
+  };
+
+  const PIECE_GLYPHS = {
+    K: '♔', Q: '♕', R: '♖', B: '♗', N: '♘', P: '♙',
+    k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟'
+  };
+  const DIFF_POINTS = { easy: 10, medium: 25, hard: 45 };
+  const WRONG_PENALTY = { easy: 5, medium: 8, hard: 12 };
+
+  let lang = 'ko';
+  try {
+    const saved = localStorage.getItem('chess-puzzle-lang');
+    if (saved === 'en' || saved === 'ko') lang = saved;
+  } catch (e) {}
+
+  const ROUND_SIZE = { easy: 7, medium: 7, hard: 6 };
+  let PUZZLES = [];
+
+  function shuffle(a) {
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+    }
+    return a;
+  }
+
+  // Pick a balanced set per difficulty, mixing puzzle kinds as evenly as possible.
+  function pickRound() {
+    const picked = [];
+    ['easy', 'medium', 'hard'].forEach(function (d) {
+      const groups = {};
+      ALL_PUZZLES.filter(function (p) { return p.difficulty === d; }).forEach(function (p) {
+        (groups[p.kind] = groups[p.kind] || []).push(p);
+      });
+      const kinds = shuffle(Object.keys(groups));
+      kinds.forEach(function (k) { shuffle(groups[k]); });
+      const chosen = [];
+      let i = 0;
+      while (chosen.length < ROUND_SIZE[d] && kinds.some(function (k) { return groups[k].length; })) {
+        const k = kinds[i % kinds.length];
+        if (groups[k].length) chosen.push(groups[k].pop());
+        i++;
+      }
+      picked.push.apply(picked, shuffle(chosen));
+    });
+    return picked;
+  }
+
+  let puzzleIndex = 0;
+  let score = 0;
+  let board = [];
+  let playerColor = 'w';
+  let selected = null;
+  let legalTargets = [];
+  let solved = false;
+
+  const boardEl = document.getElementById('board');
+  const scoreEl = document.getElementById('score');
+  const progressTextEl = document.getElementById('progress-text');
+  const progressFillEl = document.getElementById('progress-fill');
+  const feedbackEl = document.getElementById('feedback');
+  const promptTextEl = document.getElementById('prompt-text');
+  const diffLabelEl = document.getElementById('diff-label');
+  const diffDotEl = document.getElementById('diff-dot');
+  const turnNoteEl = document.getElementById('turn-note-inline');
+  const hintBtn = document.getElementById('hint-btn');
+  const revealBtn = document.getElementById('reveal-btn');
+  const nextRow = document.getElementById('next-row');
+  const nextBtn = document.getElementById('next-btn');
+  const resetBtn = document.getElementById('reset-btn');
+  const doneCard = document.getElementById('done-card');
+  const doneSummary = document.getElementById('done-summary');
+  const doneTitleEl = document.getElementById('done-title');
+  const restartBtn = document.getElementById('restart-btn');
+  const rankLabelsEl = document.getElementById('rank-labels');
+  const fileLabelsEl = document.getElementById('file-labels');
+  const titleEl = document.getElementById('title-text');
+  const subtitleEl = document.getElementById('subtitle-text');
+  const scoreLabelEl = document.getElementById('score-label-text');
+  const langKoBtn = document.getElementById('lang-ko');
+  const langEnBtn = document.getElementById('lang-en');
+  const homeBtn = document.getElementById('home-btn');
+  const menuView = document.getElementById('view-menu');
+  const quizView = document.getElementById('view-quiz');
+  const battleView = document.getElementById('view-battle');
+  const studyView = document.getElementById('view-study');
+  const bBoardEl = document.getElementById('b-board');
+  let currentView = 'menu';
+
+  function t() { return STRINGS[lang]; }
+  function isWhite(p) { return p === p.toUpperCase(); }
+  function isBlack(p) { return p === p.toLowerCase(); }
+  function inBounds(r, c) { return r >= 0 && r < 8 && c >= 0 && c < 8; }
+  function sqName(r, c) { return String.fromCharCode(97 + c) + (8 - r); }
+  function rcFromSquare(name) { return [8 - Number(name[1]), name.charCodeAt(0) - 97]; }
+
+  function parseFEN(fen) {
+    const rows = fen.split(' ')[0].split('/');
+    const b = [];
+    for (const row of rows) {
+      const boardRow = [];
+      for (const ch of row) {
+        if (/\d/.test(ch)) {
+          for (let i = 0; i < Number(ch); i++) boardRow.push(null);
+        } else {
+          boardRow.push(ch);
+        }
+      }
+      b.push(boardRow);
+    }
+    return b;
+  }
+
+  function generateMoves(b, r, c) {
+    const piece = b[r][c];
+    if (!piece) return [];
+    const white = isWhite(piece);
+    const type = piece.toUpperCase();
+    const moves = [];
+
+    function tryStep(nr, nc) {
+      if (!inBounds(nr, nc)) return;
+      const target = b[nr][nc];
+      if (!target) { moves.push([nr, nc]); return; }
+      if ((white && isBlack(target)) || (!white && isWhite(target))) moves.push([nr, nc]);
+    }
+    function trySlide(dr, dc) {
+      let nr = r + dr, nc = c + dc;
+      while (inBounds(nr, nc)) {
+        const target = b[nr][nc];
+        if (!target) { moves.push([nr, nc]); nr += dr; nc += dc; continue; }
+        if ((white && isBlack(target)) || (!white && isWhite(target))) moves.push([nr, nc]);
+        break;
+      }
+    }
+
+    if (type === 'N') {
+      [[1,2],[2,1],[-1,2],[-2,1],[1,-2],[2,-1],[-1,-2],[-2,-1]].forEach(function (o) { tryStep(r+o[0], c+o[1]); });
+    } else if (type === 'K') {
+      [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]].forEach(function (o) { tryStep(r+o[0], c+o[1]); });
+    } else if (type === 'P') {
+      const dir = white ? -1 : 1;
+      const startRow = white ? 6 : 1;
+      if (inBounds(r+dir, c) && !b[r+dir][c]) {
+        moves.push([r+dir, c]);
+        if (r === startRow && !b[r+2*dir][c]) moves.push([r+2*dir, c]);
+      }
+      [-1, 1].forEach(function (dc) {
+        const nr = r+dir, nc = c+dc;
+        if (inBounds(nr, nc) && b[nr][nc]) {
+          const tgt = b[nr][nc];
+          if ((white && isBlack(tgt)) || (!white && isWhite(tgt))) moves.push([nr, nc]);
+        }
+      });
+    } else {
+      let dirs = [];
+      if (type === 'R') dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+      if (type === 'B') dirs = [[1,1],[1,-1],[-1,1],[-1,-1]];
+      if (type === 'Q') dirs = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+      dirs.forEach(function (d) { trySlide(d[0], d[1]); });
+    }
+    return moves;
+  }
+
+  function currentPuzzle() { return PUZZLES[puzzleIndex]; }
+
+  function applyStaticStrings() {
+    const s = t();
+    if (currentView === 'menu') { titleEl.textContent = s.menuTitle; subtitleEl.textContent = s.menuSubtitle; }
+    else if (currentView === 'study') { titleEl.textContent = s.studyTitle; subtitleEl.textContent = s.studySubtitle; }
+    else if (currentView === 'battle') { titleEl.textContent = s.battleTitle; subtitleEl.textContent = s.battleSubtitle; }
+    else { titleEl.textContent = s.title; subtitleEl.textContent = s.subtitle; }
+    homeBtn.textContent = s.home;
+    document.getElementById('menu-study-title').textContent = s.menuStudyTitle;
+    document.getElementById('menu-study-desc').textContent = s.menuStudyDesc;
+    document.getElementById('menu-quiz-title').textContent = s.menuQuizTitle;
+    document.getElementById('menu-quiz-desc').textContent = s.menuQuizDesc;
+    document.getElementById('menu-battle-title').textContent = s.menuBattleTitle;
+    document.getElementById('menu-battle-desc').textContent = s.menuBattleDesc;
+    updateFullBtn();
+    document.getElementById('b-new').textContent = s.newGame;
+    document.getElementById('b-undo').textContent = s.undo;
+    document.getElementById('b-flip').textContent = s.flip;
+    document.getElementById('b-captured-title').textContent = s.capturedTitle;
+    document.getElementById('b-moves-title').textContent = s.movesTitle;
+    document.getElementById('b-cap-w-label').textContent = s.capByWhite;
+    document.getElementById('b-cap-b-label').textContent = s.capByBlack;
+    document.getElementById('promo-title').textContent = s.promoTitle;
+    scoreLabelEl.textContent = s.scoreLabel;
+    hintBtn.textContent = s.hintBtn;
+    revealBtn.textContent = s.revealBtn;
+    nextBtn.textContent = s.nextBtn;
+    resetBtn.textContent = s.resetBtn;
+    restartBtn.textContent = s.restartBtn;
+    doneTitleEl.textContent = s.doneTitle;
+    doneSummary.textContent = s.doneSummary(score, PUZZLES.length);
+    langKoBtn.classList.toggle('active', lang === 'ko');
+    langEnBtn.classList.toggle('active', lang === 'en');
+    document.documentElement.lang = lang;
+  }
+
+  function applyPuzzleStrings() {
+    const s = t();
+    const p = currentPuzzle();
+    promptTextEl.textContent = s.kindPrompt[p.kind];
+    diffLabelEl.textContent = s.diff[p.difficulty];
+    turnNoteEl.textContent = playerColor === 'w' ? s.whiteTurn : s.blackTurn;
+  }
+
+  function setLang(l) {
+    lang = l;
+    try { localStorage.setItem('chess-puzzle-lang', l); } catch (e) {}
+    applyStaticStrings();
+    if (currentView === 'quiz') applyPuzzleStrings();
+    if (currentView === 'battle') renderBattle();
+    if (currentView === 'study') renderStudyAll();
+  }
+
+  function loadPuzzle() {
+    const p = currentPuzzle();
+    board = parseFEN(p.fen);
+    playerColor = p.fen.split(' ')[1] || 'w';
+    selected = null;
+    legalTargets = [];
+    solved = false;
+    feedbackEl.textContent = '';
+    feedbackEl.className = 'feedback';
+    diffDotEl.className = 'difficulty-dot ' + p.difficulty;
+    progressTextEl.textContent = (puzzleIndex + 1) + ' / ' + PUZZLES.length;
+    progressFillEl.style.width = Math.round((puzzleIndex / PUZZLES.length) * 100) + '%';
+    hintBtn.disabled = false;
+    revealBtn.disabled = false;
+    nextRow.classList.remove('show');
+    doneCard.classList.remove('show');
+    applyPuzzleStrings();
+    renderLabels();
+    render();
+  }
+
+  function renderLabels() {
+    rankLabelsEl.innerHTML = '';
+    for (let r = 8; r >= 1; r--) {
+      const s = document.createElement('span');
+      s.textContent = r;
+      rankLabelsEl.appendChild(s);
+    }
+    fileLabelsEl.innerHTML = '';
+    ['a','b','c','d','e','f','g','h'].forEach(function (f) {
+      const s = document.createElement('span');
+      s.textContent = f;
+      fileLabelsEl.appendChild(s);
+    });
+  }
+
+  function render() {
+    boardEl.innerHTML = '';
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        const cell = document.createElement('div');
+        const isLight = (r + c) % 2 === 0;
+        cell.className = 'sq ' + (isLight ? 'light' : 'dark');
+        cell.dataset.r = r;
+        cell.dataset.c = c;
+        const piece = board[r][c];
+        if (piece) {
+          const span = document.createElement('span');
+          span.className = 'piece ' + (isWhite(piece) ? 'white-piece' : 'black-piece');
+          span.textContent = PIECE_GLYPHS[piece];
+          cell.appendChild(span);
+        }
+        if (selected && selected[0] === r && selected[1] === c) cell.classList.add('selected');
+        if (legalTargets.some(function (t2) { return t2[0] === r && t2[1] === c; })) {
+          const dot = document.createElement('div');
+          dot.className = 'legal-dot' + (piece ? ' capture' : '');
+          cell.appendChild(dot);
+        }
+        cell.addEventListener('click', onSquareClick);
+        boardEl.appendChild(cell);
+      }
+    }
+  }
+
+  function onSquareClick(e) {
+    if (solved) return;
+    const r = Number(e.currentTarget.dataset.r);
+    const c = Number(e.currentTarget.dataset.c);
+    const piece = board[r][c];
+
+    if (selected) {
+      const isTarget = legalTargets.some(function (t2) { return t2[0] === r && t2[1] === c; });
+      if (isTarget) { attemptMove(selected[0], selected[1], r, c); return; }
+      if (piece && ((playerColor === 'w' && isWhite(piece)) || (playerColor === 'b' && isBlack(piece)))) {
+        selected = [r, c];
+        legalTargets = generateMoves(board, r, c);
+        render();
+        return;
+      }
+      selected = null; legalTargets = []; render();
+      return;
+    }
+
+    if (piece && ((playerColor === 'w' && isWhite(piece)) || (playerColor === 'b' && isBlack(piece)))) {
+      selected = [r, c];
+      legalTargets = generateMoves(board, r, c);
+      render();
+    }
+  }
+
+  function attemptMove(fr, fc, tr, tc) {
+    const s = t();
+    const p = currentPuzzle();
+    const moveStr = sqName(fr, fc) + sqName(tr, tc);
+    const isCorrect = p.solution.indexOf(moveStr) !== -1;
+    const piece = board[fr][fc];
+
+    if (isCorrect) {
+      board[tr][tc] = piece; board[fr][fc] = null;
+      selected = null; legalTargets = []; solved = true;
+      render();
+      flashSquare(tr, tc, 'good');
+      const pts = DIFF_POINTS[p.difficulty];
+      score += pts;
+      scoreEl.textContent = score;
+      progressFillEl.style.width = Math.round(((puzzleIndex + 1) / PUZZLES.length) * 100) + '%';
+      const pieceName = s.pieces[piece.toUpperCase()];
+      feedbackEl.textContent = s.correct(pieceName, sqName(fr, fc), sqName(tr, tc), pts);
+      feedbackEl.className = 'feedback good';
+      hintBtn.disabled = true; revealBtn.disabled = true;
+      nextRow.classList.add('show');
+    } else {
+      flashSquare(tr, tc, 'bad');
+      const penalty = WRONG_PENALTY[p.difficulty];
+      score = Math.max(0, score - penalty);
+      scoreEl.textContent = score;
+      feedbackEl.textContent = s.wrong(penalty);
+      feedbackEl.className = 'feedback bad';
+      selected = null; legalTargets = [];
+      render();
+    }
+  }
+
+  function flashSquare(r, c, kind) {
+    const idx = r * 8 + c;
+    const cell = boardEl.children[idx];
+    if (!cell) return;
+    cell.classList.add(kind === 'good' ? 'flash-good' : 'flash-bad');
+    setTimeout(function () { cell.classList.remove('flash-good', 'flash-bad'); }, 650);
+  }
+
+  hintBtn.addEventListener('click', function () {
+    const s = t();
+    const p = currentPuzzle();
+    const [fr, fc] = rcFromSquare(p.solution[0].slice(0, 2));
+    const piece = board[fr][fc];
+    const pieceName = s.pieces[piece.toUpperCase()];
+    feedbackEl.textContent = s.hintText(s.kindHint(p.kind, pieceName));
+    feedbackEl.className = 'feedback';
+  });
+
+  revealBtn.addEventListener('click', function () {
+    if (solved) return;
+    const s = t();
+    const p = currentPuzzle();
+    const from = p.solution[0].slice(0, 2), to = p.solution[0].slice(2, 4);
+    const [fr, fc] = rcFromSquare(from);
+    const [tr, tc] = rcFromSquare(to);
+    const piece = board[fr][fc];
+    board[tr][tc] = piece; board[fr][fc] = null;
+    selected = null; legalTargets = []; solved = true;
+    render();
+    flashSquare(tr, tc, 'good');
+    const pieceName = s.pieces[piece.toUpperCase()];
+    feedbackEl.textContent = s.revealText(pieceName, from, to);
+    feedbackEl.className = 'feedback';
+    hintBtn.disabled = true; revealBtn.disabled = true;
+    nextRow.classList.add('show');
+  });
+
+  nextBtn.addEventListener('click', function () {
+    puzzleIndex += 1;
+    if (puzzleIndex >= PUZZLES.length) {
+      document.querySelector('.layout').style.display = 'none';
+      doneSummary.textContent = t().doneSummary(score, PUZZLES.length);
+      doneCard.classList.add('show');
+      return;
+    }
+    loadPuzzle();
+  });
+
+  function fullReset() {
+    puzzleIndex = 0; score = 0;
+    PUZZLES = pickRound();
+    scoreEl.textContent = '0';
+    document.querySelector('.layout').style.display = 'grid';
+    doneCard.classList.remove('show');
+    loadPuzzle();
+  }
+
+
+  // ================= Battle (1 vs 1) =================
+  // ENGINE-START
+  const KN_OFFS = [[1,2],[2,1],[-1,2],[-2,1],[1,-2],[2,-1],[-1,-2],[-2,-1]];
+  const KG_OFFS = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+  const DIAG = [[1,1],[1,-1],[-1,1],[-1,-1]];
+  const ORTH = [[1,0],[-1,0],[0,1],[0,-1]];
+
+  function attackedBy(b, r, c, byWhite) {
+    const pr = byWhite ? r + 1 : r - 1;
+    const pawn = byWhite ? 'P' : 'p';
+    for (let dc = -1; dc <= 1; dc += 2) {
+      if (inBounds(pr, c + dc) && b[pr][c + dc] === pawn) return true;
+    }
+    const kn = byWhite ? 'N' : 'n';
+    const kg = byWhite ? 'K' : 'k';
+    for (let i = 0; i < 8; i++) {
+      let nr = r + KN_OFFS[i][0], nc = c + KN_OFFS[i][1];
+      if (inBounds(nr, nc) && b[nr][nc] === kn) return true;
+      nr = r + KG_OFFS[i][0]; nc = c + KG_OFFS[i][1];
+      if (inBounds(nr, nc) && b[nr][nc] === kg) return true;
+    }
+    const bi = byWhite ? 'B' : 'b', ro = byWhite ? 'R' : 'r', qu = byWhite ? 'Q' : 'q';
+    for (let i = 0; i < 4; i++) {
+      let nr = r + DIAG[i][0], nc = c + DIAG[i][1];
+      while (inBounds(nr, nc)) {
+        const p = b[nr][nc];
+        if (p) { if (p === bi || p === qu) return true; break; }
+        nr += DIAG[i][0]; nc += DIAG[i][1];
+      }
+      nr = r + ORTH[i][0]; nc = c + ORTH[i][1];
+      while (inBounds(nr, nc)) {
+        const p = b[nr][nc];
+        if (p) { if (p === ro || p === qu) return true; break; }
+        nr += ORTH[i][0]; nc += ORTH[i][1];
+      }
+    }
+    return false;
+  }
+
+  function findKing(b, white) {
+    const k = white ? 'K' : 'k';
+    for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) if (b[r][c] === k) return [r, c];
+    return null;
+  }
+
+  function pseudoMoves(s, r, c) {
+    const b = s.board, p = b[r][c], white = isWhite(p), t = p.toUpperCase(), out = [];
+    function add(tr, tc, extra) {
+      const m = { fr: r, fc: c, tr: tr, tc: tc, piece: p };
+      if (extra) for (const k in extra) m[k] = extra[k];
+      out.push(m);
+    }
+    if (t === 'P') {
+      const dir = white ? -1 : 1, start = white ? 6 : 1, last = white ? 0 : 7;
+      const nr = r + dir;
+      if (inBounds(nr, c) && !b[nr][c]) {
+        add(nr, c, nr === last ? { promo: true } : null);
+        if (r === start && !b[r + 2 * dir][c]) add(r + 2 * dir, c, { double: true });
+      }
+      for (let dc = -1; dc <= 1; dc += 2) {
+        const nc = c + dc;
+        if (!inBounds(nr, nc)) continue;
+        const tg = b[nr][nc];
+        if (tg && isWhite(tg) !== white) add(nr, nc, nr === last ? { promo: true, capture: true } : { capture: true });
+        else if (!tg && s.ep && s.ep[0] === nr && s.ep[1] === nc) add(nr, nc, { ep: true, capture: true });
+      }
+    } else if (t === 'N' || t === 'K') {
+      const offs = t === 'N' ? KN_OFFS : KG_OFFS;
+      for (let i = 0; i < 8; i++) {
+        const nr = r + offs[i][0], nc = c + offs[i][1];
+        if (!inBounds(nr, nc)) continue;
+        const tg = b[nr][nc];
+        if (!tg) add(nr, nc, null);
+        else if (isWhite(tg) !== white) add(nr, nc, { capture: true });
+      }
+      if (t === 'K') {
+        const home = white ? 7 : 0;
+        if (r === home && c === 4 && !attackedBy(b, r, c, !white)) {
+          if (s.castle[white ? 'K' : 'k'] && !b[home][5] && !b[home][6] && b[home][7] === (white ? 'R' : 'r') &&
+              !attackedBy(b, home, 5, !white) && !attackedBy(b, home, 6, !white)) add(home, 6, { castle: 'K' });
+          if (s.castle[white ? 'Q' : 'q'] && !b[home][3] && !b[home][2] && !b[home][1] && b[home][0] === (white ? 'R' : 'r') &&
+              !attackedBy(b, home, 3, !white) && !attackedBy(b, home, 2, !white)) add(home, 2, { castle: 'Q' });
+        }
+      }
+    } else {
+      let dirs = [];
+      if (t === 'R') dirs = ORTH;
+      if (t === 'B') dirs = DIAG;
+      if (t === 'Q') dirs = ORTH.concat(DIAG);
+      for (let i = 0; i < dirs.length; i++) {
+        let nr = r + dirs[i][0], nc = c + dirs[i][1];
+        while (inBounds(nr, nc)) {
+          const tg = b[nr][nc];
+          if (!tg) add(nr, nc, null);
+          else { if (isWhite(tg) !== white) add(nr, nc, { capture: true }); break; }
+          nr += dirs[i][0]; nc += dirs[i][1];
+        }
+      }
+    }
+    return out;
+  }
+
+  function applyMove(s, m, promoChoice) {
+    const b = s.board.map(function (row) { return row.slice(); });
+    const white = isWhite(m.piece);
+    let captured = b[m.tr][m.tc];
+    if (m.ep) { captured = b[m.fr][m.tc]; b[m.fr][m.tc] = null; }
+    b[m.tr][m.tc] = m.piece; b[m.fr][m.fc] = null;
+    if (m.promo) b[m.tr][m.tc] = white ? promoChoice : promoChoice.toLowerCase();
+    if (m.castle === 'K') { b[m.tr][5] = b[m.tr][7]; b[m.tr][7] = null; }
+    if (m.castle === 'Q') { b[m.tr][3] = b[m.tr][0]; b[m.tr][0] = null; }
+    const castle = { K: s.castle.K, Q: s.castle.Q, k: s.castle.k, q: s.castle.q };
+    const t = m.piece.toUpperCase();
+    if (t === 'K') { if (white) { castle.K = false; castle.Q = false; } else { castle.k = false; castle.q = false; } }
+    if (m.fr === 7 && m.fc === 0 || m.tr === 7 && m.tc === 0) castle.Q = false;
+    if (m.fr === 7 && m.fc === 7 || m.tr === 7 && m.tc === 7) castle.K = false;
+    if (m.fr === 0 && m.fc === 0 || m.tr === 0 && m.tc === 0) castle.q = false;
+    if (m.fr === 0 && m.fc === 7 || m.tr === 0 && m.tc === 7) castle.k = false;
+    return {
+      state: { board: b, turn: white ? 'b' : 'w', castle: castle, ep: m.double ? [(m.fr + m.tr) / 2, m.fc] : null, half: (t === 'P' || captured) ? 0 : s.half + 1 },
+      captured: captured
+    };
+  }
+
+  function legalMoves(s, r, c) {
+    const white = isWhite(s.board[r][c]);
+    return pseudoMoves(s, r, c).filter(function (m) {
+      const ns = applyMove(s, m, 'Q').state;
+      const k = findKing(ns.board, white);
+      return !k || !attackedBy(ns.board, k[0], k[1], !white);
+    });
+  }
+
+  function allLegal(s) {
+    const out = [];
+    for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
+      const p = s.board[r][c];
+      if (p && isWhite(p) === (s.turn === 'w')) {
+        const ms = legalMoves(s, r, c);
+        for (let i = 0; i < ms.length; i++) out.push(ms[i]);
+      }
+    }
+    return out;
+  }
+
+  function insufficientMaterial(b) {
+    const rest = [];
+    for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
+      const p = b[r][c];
+      if (p && p.toUpperCase() !== 'K') rest.push(p.toUpperCase());
+    }
+    return rest.length === 0 || (rest.length === 1 && (rest[0] === 'N' || rest[0] === 'B'));
+  }
+
+  function gameResult(s) {
+    const white = s.turn === 'w';
+    const k = findKing(s.board, white);
+    const check = attackedBy(s.board, k[0], k[1], !white);
+    if (allLegal(s).length === 0) return check ? { type: 'checkmate', winner: white ? 'b' : 'w', check: true } : { type: 'stalemate', check: false };
+    if (insufficientMaterial(s.board)) return { type: 'material', check: check };
+    if (s.half >= 100) return { type: 'fifty', check: check };
+    return { type: 'playing', check: check };
+  }
+  // ENGINE-END
+
+  const START_BOARD = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR';
+  let G = null, bSel = null, bTargets = [], bFlip = false, bHistory = [], bPendingPromo = null;
+
+  function startBattle() {
+    G = {
+      state: { board: parseFEN(START_BOARD), turn: 'w', castle: { K: true, Q: true, k: true, q: true }, ep: null, half: 0 },
+      captured: { w: [], b: [] }, moveList: [], last: null, status: null
+    };
+    G.status = gameResult(G.state);
+    bSel = null; bTargets = []; bHistory = []; bPendingPromo = null; bFlip = false;
+    renderBattle();
+  }
+
+  function notate(m, captured, promoChoice, res) {
+    let txt;
+    if (m.castle) txt = m.castle === 'K' ? 'O-O' : 'O-O-O';
+    else {
+      txt = PIECE_GLYPHS[m.piece] + sqName(m.fr, m.fc) + (captured ? 'x' : '→') + sqName(m.tr, m.tc);
+      if (m.promo) txt += '=' + PIECE_GLYPHS[isWhite(m.piece) ? promoChoice : promoChoice.toLowerCase()];
+    }
+    if (res.type === 'checkmate') txt += '#'; else if (res.check) txt += '+';
+    return txt;
+  }
+
+  function bExecute(m, promoChoice) {
+    bHistory.push(JSON.stringify(G));
+    const res = applyMove(G.state, m, promoChoice || 'Q');
+    if (res.captured) G.captured[isWhite(res.captured) ? 'w' : 'b'].push(res.captured);
+    G.state = res.state;
+    G.status = gameResult(G.state);
+    G.moveList.push({ white: isWhite(m.piece), text: notate(m, res.captured, promoChoice || 'Q', G.status) });
+    G.last = [[m.fr, m.fc], [m.tr, m.tc]];
+    bSel = null; bTargets = []; bPendingPromo = null;
+    renderBattle();
+  }
+
+  function bOnClick(e) {
+    if (G.status.type !== 'playing' || bPendingPromo) return;
+    const r = Number(e.currentTarget.dataset.r), c = Number(e.currentTarget.dataset.c);
+    const st = G.state, piece = st.board[r][c];
+    const mine = piece && isWhite(piece) === (st.turn === 'w');
+    if (bSel) {
+      const cand = bTargets.filter(function (m) { return m.tr === r && m.tc === c; });
+      if (cand.length) {
+        if (cand[0].promo) { bPendingPromo = cand[0]; renderBattle(); } else bExecute(cand[0], null);
+        return;
+      }
+      if (mine && !(bSel[0] === r && bSel[1] === c)) { bSel = [r, c]; bTargets = legalMoves(st, r, c); }
+      else { bSel = null; bTargets = []; }
+      renderBattle();
+      return;
+    }
+    if (mine) { bSel = [r, c]; bTargets = legalMoves(st, r, c); renderBattle(); }
+  }
+
+  function renderBattle() {
+    if (!G) return;
+    const s = t(), st = G.state, res = G.status;
+    bBoardEl.innerHTML = '';
+    const kingSq = res.check ? findKing(st.board, st.turn === 'w') : null;
+    for (let i = 0; i < 8; i++) for (let j = 0; j < 8; j++) {
+      const r = bFlip ? 7 - i : i, c = bFlip ? 7 - j : j;
+      const cell = document.createElement('div');
+      cell.className = 'sq ' + (((r + c) % 2 === 0) ? 'light' : 'dark');
+      cell.dataset.r = r; cell.dataset.c = c;
+      const piece = st.board[r][c];
+      if (piece) {
+        const span = document.createElement('span');
+        span.className = 'piece ' + (isWhite(piece) ? 'white-piece' : 'black-piece');
+        span.textContent = PIECE_GLYPHS[piece];
+        cell.appendChild(span);
+      }
+      if (G.last && ((G.last[0][0] === r && G.last[0][1] === c) || (G.last[1][0] === r && G.last[1][1] === c))) cell.classList.add('last');
+      if (kingSq && kingSq[0] === r && kingSq[1] === c) cell.classList.add('incheck');
+      if (bSel && bSel[0] === r && bSel[1] === c) cell.classList.add('selected');
+      const tm = bTargets.filter(function (m) { return m.tr === r && m.tc === c; });
+      if (tm.length) {
+        const dot = document.createElement('div');
+        dot.className = 'legal-dot' + (tm[0].capture ? ' capture' : '');
+        cell.appendChild(dot);
+      }
+      cell.addEventListener('click', bOnClick);
+      bBoardEl.appendChild(cell);
+    }
+    const rl = document.getElementById('b-rank-labels'), fl = document.getElementById('b-file-labels');
+    rl.innerHTML = ''; fl.innerHTML = '';
+    for (let i = 0; i < 8; i++) {
+      const a = document.createElement('span'); a.textContent = bFlip ? i + 1 : 8 - i; rl.appendChild(a);
+      const f = document.createElement('span'); f.textContent = 'abcdefgh'.charAt(bFlip ? 7 - i : i); fl.appendChild(f);
+    }
+
+    const over = res.type !== 'playing';
+    document.getElementById('b-turn-dot').className = 'turn-dot ' + st.turn;
+    document.getElementById('b-turn-text').textContent = over ? s.gameOver : (st.turn === 'w' ? s.turnWhite : s.turnBlack);
+    const stEl = document.getElementById('b-status');
+    stEl.className = 'status-text';
+    if (res.type === 'checkmate') { stEl.textContent = s.checkmate(res.winner); stEl.classList.add('end'); }
+    else if (res.type === 'stalemate') { stEl.textContent = s.stalemate; stEl.classList.add('end'); }
+    else if (res.type === 'material') { stEl.textContent = s.drawMaterial; stEl.classList.add('end'); }
+    else if (res.type === 'fifty') { stEl.textContent = s.drawFifty; stEl.classList.add('end'); }
+    else if (res.check) { stEl.textContent = s.inCheck; stEl.classList.add('alert'); }
+    else stEl.textContent = '';
+
+    const order = { Q: 0, R: 1, B: 2, N: 3, P: 4 };
+    function fillCaptured(id, list) {
+      const el = document.getElementById(id);
+      el.innerHTML = '';
+      list.slice().sort(function (a, b2) { return order[a.toUpperCase()] - order[b2.toUpperCase()]; }).forEach(function (p) {
+        const sp = document.createElement('span');
+        sp.className = isWhite(p) ? 'white-piece' : 'black-piece';
+        sp.textContent = PIECE_GLYPHS[p];
+        el.appendChild(sp);
+      });
+    }
+    fillCaptured('b-cap-w', G.captured.b);
+    fillCaptured('b-cap-b', G.captured.w);
+
+    const mv = document.getElementById('b-moves');
+    mv.innerHTML = '';
+    if (!G.moveList.length) {
+      const e = document.createElement('div'); e.className = 'moves-empty'; e.textContent = s.noMoves; mv.appendChild(e);
+    } else {
+      for (let i = 0; i < G.moveList.length; i += 2) {
+        const row = document.createElement('div'); row.className = 'move-row';
+        const n = document.createElement('span'); n.className = 'n'; n.textContent = (i / 2 + 1) + '.';
+        const a = document.createElement('span'); a.textContent = G.moveList[i].text;
+        const b2 = document.createElement('span'); b2.textContent = G.moveList[i + 1] ? G.moveList[i + 1].text : '';
+        row.appendChild(n); row.appendChild(a); row.appendChild(b2);
+        mv.appendChild(row);
+      }
+      mv.scrollTop = mv.scrollHeight;
+    }
+
+    const ov = document.getElementById('promo-overlay');
+    const pc = document.getElementById('promo-choices');
+    pc.innerHTML = '';
+    if (bPendingPromo) {
+      ov.hidden = false;
+      const white = isWhite(bPendingPromo.piece);
+      ['Q', 'R', 'B', 'N'].forEach(function (p) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'promo-choice ' + (white ? 'on-dark white-piece' : 'on-light black-piece');
+        btn.textContent = PIECE_GLYPHS[white ? p : p.toLowerCase()];
+        btn.addEventListener('click', function () { bExecute(bPendingPromo, p); });
+        pc.appendChild(btn);
+      });
+    } else ov.hidden = true;
+    document.getElementById('b-undo').disabled = !bPendingPromo && bHistory.length === 0;
+  }
+
+  document.getElementById('b-new').addEventListener('click', startBattle);
+  document.getElementById('b-flip').addEventListener('click', function () { bFlip = !bFlip; renderBattle(); });
+  document.getElementById('b-undo').addEventListener('click', function () {
+    if (bPendingPromo) { bPendingPromo = null; renderBattle(); return; }
+    if (!bHistory.length) return;
+    G = JSON.parse(bHistory.pop());
+    bSel = null; bTargets = [];
+    renderBattle();
+  });
+
+  // ================= Study (lessons) =================
+  // STUDY-DATA-START
+  function T(ko, en) { return { ko: ko, en: en }; }
+  function sStateFromPage(pg) {
+    const cs = pg.castle || '';
+    return {
+      board: parseFEN(pg.fen), turn: 'w',
+      castle: { K: cs.indexOf('K') !== -1, Q: cs.indexOf('Q') !== -1, k: false, q: false },
+      ep: pg.ep ? [8 - Number(pg.ep.charAt(1)), pg.ep.charCodeAt(0) - 97] : null, half: 0
+    };
+  }
+  const PIECE_INFO = {
+    K: T('킹: 가장 중요한 기물이에요. 도망갈 수 없게 되면 져요(체크메이트). 한 칸씩 움직여요.', 'King: the most important piece. If it cannot escape, you lose (checkmate). It moves one square at a time.'),
+    Q: T('퀸: 가장 힘이 센 기물이에요! 곧게도, 대각선으로도 멀리 갈 수 있어요.', 'Queen: the most powerful piece! She can travel far in straight lines and diagonals.'),
+    R: T('룩: 가로와 세로로 곧게 멀리 갈 수 있어요.', 'Rook: travels far in straight lines, sideways and up and down.'),
+    B: T('비숍: 대각선으로 멀리 갈 수 있어요.', 'Bishop: travels far along diagonals.'),
+    N: T('나이트: L자로 점프해요. 다른 기물을 뛰어넘을 수 있어요.', 'Knight: jumps in an L shape. It can hop over other pieces.'),
+    P: T('폰: 앞으로 한 칸씩 가요. 대각선 앞의 상대 기물을 잡아요.', 'Pawn: moves forward one square at a time. It captures diagonally forward.')
+  };
+  const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR';
+  const MATE_WRONG = T('아직 킹이 도망갈 수 있어요. 다른 수를 찾아볼까요?', 'The king can still get away. Want to look for another move?');
+  const LESSONS = [
+    { id: 'board', icon: '🗺️', title: T('체스판 알아보기', 'Meet the Board'), pages: [
+      { fen: '8/8/8/8/8/8/8/8',
+        text: T('체스판은 가로 8칸, 세로 8칸, 모두 64칸이에요. 세로줄은 a~h, 가로줄은 1~8이라고 불러요. 그래서 모든 칸에 e4 같은 이름이 있어요!',
+                'A chessboard has 8 columns and 8 rows, 64 squares in all. The columns are named a to h and the rows 1 to 8, so every square has a name like e4!'),
+        task: { type: 'tapSquare', goal: ['e4'],
+          label: T('e4 칸을 찾아서 눌러보세요. (어느 칸이든 누르면 이름을 알려줘요)', 'Find and tap the e4 square. (Tap any square to hear its name.)'),
+          ok: T('맞아요! e4는 e줄과 4번 줄이 만나는 칸이에요.', 'Yes! e4 is where column e meets row 4.') } },
+      { fen: START_FEN,
+        text: T('체스에는 6가지 기물이 있어요: 킹, 퀸, 룩, 비숍, 나이트, 폰. 백(흰색)이 먼저 움직여요. 기물을 눌러서 이름과 하는 일을 알아봐요!',
+                'There are 6 kinds of pieces: king, queen, rook, bishop, knight and pawn. White always moves first. Tap the pieces to learn their names and jobs!'),
+        task: { type: 'explore', label: T('6가지 기물을 모두 한 번씩 눌러보세요.', 'Tap each of the 6 kinds of pieces once.'),
+          ok: T('모두 찾았어요! 이제 기물마다 어떻게 움직이는지 하나씩 배워볼까요?', "You found them all! Now let's learn how each piece moves.") } }
+    ] },
+    { id: 'pawn', icon: '♙', title: T('폰', 'The Pawn'), pages: [
+      { fen: '8/8/8/8/8/8/4P3/8',
+        text: T('폰은 앞으로만 가요. 보통은 한 칸씩 가지만, 처음 움직일 때만 두 칸까지 갈 수 있어요.', 'Pawns only move forward. Usually it is one square at a time, but on its very first move a pawn can go two squares.'),
+        task: { type: 'moveTo', goal: ['e4'], label: T('폰을 ⭐ 칸까지 두 칸 앞으로 움직여보세요.', 'Move the pawn two squares forward to the ⭐ square.'),
+          ok: T('잘했어요! 폰은 처음에만 두 칸 갈 수 있어요.', 'Nice! A pawn can only jump two squares on its first move.'),
+          wrong: T('앗, 한 칸만 갔네요. 처음엔 두 칸도 갈 수 있어요! 다시 해볼까요?', 'Oops, that was only one square. On its first move it can go two! Try again?') } },
+      { fen: '8/8/8/3ppp2/4P3/8/8/8',
+        text: T('폰은 바로 앞에 다른 기물이 있으면 막혀서 못 가요. 대신 대각선 앞에 있는 상대 기물은 잡을 수 있어요!', 'A pawn is blocked if something stands right in front of it. But it can capture enemy pieces diagonally in front!'),
+        task: { type: 'moveTo', goal: ['d5', 'f5'], label: T('⭐ 표시된 상대 폰 중 하나를 잡아보세요.', 'Capture one of the enemy pawns marked with ⭐.'),
+          ok: T('좋아요! 폰은 대각선으로만 잡아요.', 'Great! Pawns capture only diagonally.') } }
+    ] },
+    { id: 'rook', icon: '♖', title: T('룩', 'The Rook'), pages: [
+      { fen: '8/8/8/8/R7/8/8/8',
+        text: T('룩은 가로나 세로로 곧게, 칸 수에 상관없이 멀리 갈 수 있어요. 대신 다른 기물을 뛰어넘을 수는 없어요.', 'A rook moves in straight lines, sideways or up and down, as far as it likes. It cannot jump over other pieces.'),
+        task: { type: 'moveTo', goal: ['h4'], label: T('룩을 ⭐ 칸으로 보내보세요.', 'Send the rook to the ⭐ square.'),
+          ok: T('좋아요! 룩은 곧은 길을 쭉 달려요.', 'Good! Rooks zoom along straight lines.'),
+          wrong: T('그 칸도 갈 수 있지만, ⭐ 칸으로 가볼까요?', 'You can go there too, but try the ⭐ square!') } },
+      { fen: '8/8/3n4/8/8/8/8/3R4',
+        text: T('룩이 갈 수 있는 길에 상대 기물이 있으면 그 기물을 잡을 수 있어요. 잡힌 기물은 보드에서 사라져요.', "If an enemy piece is on the rook's path, the rook can capture it. A captured piece leaves the board."),
+        task: { type: 'moveTo', goal: ['d6'], label: T('룩으로 ⭐ 의 나이트를 잡아보세요.', 'Capture the knight on the ⭐ square with your rook.'),
+          ok: T('나이트를 잡았어요!', 'You captured the knight!'),
+          wrong: T('⭐ 표시가 된 나이트를 잡아볼까요?', 'Try capturing the knight marked with ⭐!') } }
+    ] },
+    { id: 'bishop', icon: '♗', title: T('비숍', 'The Bishop'), pages: [
+      { fen: '8/8/8/8/8/8/8/2B5',
+        text: T('비숍은 대각선으로 멀리 갈 수 있어요. 그래서 처음 시작한 색깔의 칸에서만 움직여요.', 'A bishop moves diagonally as far as it wants, so it always stays on squares of one color.'),
+        task: { type: 'moveTo', goal: ['h6'], label: T('비숍을 ⭐ 칸으로 보내보세요.', 'Send the bishop to the ⭐ square.'),
+          ok: T('대각선으로 쭉! 잘했어요.', 'Straight down the diagonal. Well done!'),
+          wrong: T('⭐ 칸을 향해 대각선으로 가볼까요?', 'Try a diagonal move toward the ⭐ square!') } },
+      { fen: '8/6r1/8/8/3B4/8/8/8',
+        text: T('비숍도 대각선 길에 있는 상대 기물을 잡을 수 있어요.', 'Bishops can capture enemy pieces on their diagonal too.'),
+        task: { type: 'moveTo', goal: ['g7'], label: T('비숍으로 ⭐ 의 룩을 잡아보세요.', 'Capture the rook on the ⭐ square with your bishop.'),
+          ok: T('룩을 잡았어요!', 'You captured the rook!'),
+          wrong: T('⭐ 표시가 된 룩을 잡아볼까요?', 'Try capturing the rook marked with ⭐!') } }
+    ] },
+    { id: 'queen', icon: '♕', title: T('퀸', 'The Queen'), pages: [
+      { fen: '8/8/8/8/3Q4/8/8/8',
+        text: T('퀸은 가장 힘이 센 기물이에요! 룩처럼 곧게, 비숍처럼 대각선으로 모두 갈 수 있어요.', 'The queen is the most powerful piece! She moves like a rook and a bishop combined.'),
+        task: { type: 'moveTo', goal: ['a7'], label: T('퀸을 ⭐ 칸으로 보내보세요.', 'Send the queen to the ⭐ square.'),
+          ok: T('멋져요! 퀸은 어디로든 갈 수 있어요.', 'Wonderful! The queen can go almost anywhere.'),
+          wrong: T('⭐ 칸으로 가볼까요? 대각선으로 갈 수 있어요.', 'Try the ⭐ square! You can get there diagonally.') } },
+      { fen: '8/8/8/7b/8/8/8/3Q4',
+        text: T('퀸으로 멀리 있는 상대 기물도 잡을 수 있어요.', 'The queen can capture far-away enemy pieces too.'),
+        task: { type: 'moveTo', goal: ['h5'], label: T('퀸으로 ⭐ 의 비숍을 잡아보세요.', 'Capture the bishop on the ⭐ square with your queen.'),
+          ok: T('잘 잡았어요!', 'Nicely captured!'),
+          wrong: T('⭐ 표시가 된 비숍을 잡아볼까요?', 'Try capturing the bishop marked with ⭐!') } }
+    ] },
+    { id: 'knight', icon: '♘', title: T('나이트', 'The Knight'), pages: [
+      { fen: '8/8/8/8/8/8/8/1N6',
+        text: T('나이트는 "L"자로 움직여요. 한 방향으로 두 칸 가고, 옆으로 한 칸 가요.', 'A knight moves in an "L" shape: two squares in one direction, then one square to the side.'),
+        task: { type: 'moveTo', goal: ['c3'], label: T('나이트를 ⭐ 칸으로 보내보세요.', 'Send the knight to the ⭐ square.'),
+          ok: T('L자 점프 성공!', 'Nice L-shaped jump!'),
+          wrong: T('L자 모양으로 움직여서 ⭐ 칸으로 가볼까요?', 'Try an L-shaped move to the ⭐ square!') } },
+      { fen: '8/8/8/8/8/8/5PPP/6N1',
+        text: T('나이트는 다른 기물을 뛰어넘을 수 있는 유일한 기물이에요!', 'The knight is the only piece that can jump over other pieces!'),
+        task: { type: 'moveTo', goal: ['f3', 'h3'], label: T('나이트를 ⭐ 칸으로 점프시켜 보세요.', 'Jump the knight to a ⭐ square.'),
+          ok: T('폰들을 훌쩍 뛰어넘었어요!', 'You hopped right over the pawns!'),
+          wrong: T('나이트는 앞의 폰들을 뛰어넘을 수 있어요. ⭐ 칸으로 가볼까요?', 'The knight can hop over the pawns in front. Try a ⭐ square!') } },
+      { fen: '8/8/5q2/6p1/4N3/8/8/8',
+        text: T('잡을 수 있는 기물이 여러 개일 땐, 어떤 걸 잡는 게 가장 좋을지 생각해봐요.', 'When you can capture several pieces, think about which one is best to take.'),
+        task: { type: 'moveTo', goal: ['f6'], label: T('나이트로 가장 힘센 기물을 잡아보세요.', 'Capture the most powerful piece with your knight.'),
+          ok: T('퀸을 잡았어요! 퀸이 폰보다 훨씬 소중해요.', 'You captured the queen! She is worth far more than a pawn.'),
+          wrong: T('폰보다 퀸을 잡는 게 훨씬 이득이에요! 다시 해볼까요?', 'Capturing the queen is much better than the pawn! Try again?') } }
+    ] },
+    { id: 'king', icon: '♔', title: T('킹', 'The King'), pages: [
+      { fen: '8/8/8/8/4K3/8/8/8',
+        text: T('킹은 가장 중요한 기물이에요. 모든 방향으로 딱 한 칸씩만 움직여요.', 'The king is the most important piece. It moves just one square in any direction.'),
+        task: { type: 'anyMove', label: T('킹을 아무 칸으로나 한 칸 움직여보세요.', 'Move the king one square, anywhere you like.'),
+          ok: T('잘했어요! 킹은 조심조심 움직여요.', 'Well done! The king always moves carefully.') } },
+      { fen: '7k/8/8/8/8/8/r7/4K3',
+        text: T('킹은 상대 기물이 공격하는 칸으로는 갈 수 없어요. 여기서는 검은 룩이 2번 줄 전체를 지키고 있어요!', 'A king cannot step onto a square that an enemy piece attacks. Here the black rook guards the whole 2nd row!'),
+        task: { type: 'anyMove', label: T('점으로 표시된 안전한 칸으로 킹을 움직여보세요.', 'Move the king to one of the safe squares marked with a dot.'),
+          ok: T('맞아요! 위험한 칸으로는 갈 수 없어요.', 'Right! The king can never walk into danger.') } }
+    ] },
+    { id: 'check', icon: '👑', title: T('체크와 체크메이트', 'Check and Checkmate'), pages: [
+      { fen: '4k3/8/8/8/8/8/8/R5K1',
+        text: T('상대 킹을 공격하면 "체크!"라고 해요. 체크를 받은 쪽은 반드시 킹을 지켜야 해요.', 'Attacking the enemy king is called "check!". The player in check must protect their king right away.'),
+        task: { type: 'check', label: T('룩으로 상대 킹에게 체크를 걸어보세요.', "Give the enemy king a check with your rook."),
+          ok: T('체크! 상대는 킹을 지켜야 해요.', 'Check! Now your opponent must protect the king.'),
+          wrong: T('아직 체크가 아니에요. 킹이 있는 줄을 룩으로 공격해보세요!', 'That is not check yet. Attack the king with your rook!') } },
+      { fen: 'R3r3/8/8/8/8/2B5/8/4K3',
+        text: T('체크를 받으면 3가지 방법으로 벗어날 수 있어요. ① 킹이 피하기 ② 공격하는 기물 잡기 ③ 사이를 막기. 지금 우리 킹이 체크를 받았어요!', 'When you are in check there are 3 ways out: (1) move the king away, (2) capture the attacker, (3) block the attack. Right now our king is in check!'),
+        task: { type: 'escape', label: T('세 가지 방법 중 하나로 체크에서 벗어나 보세요.', 'Get out of check using one of the three ways.') } },
+      { fen: '6k1/5ppp/8/8/8/8/8/R5K1',
+        text: T('킹이 피할 곳도, 막을 방법도, 잡을 방법도 없으면 "체크메이트"예요. 체크메이트를 만들면 게임에서 이겨요!', 'If the king cannot move away, block, or capture the attacker, it is "checkmate". Checkmate wins the game!'),
+        task: { type: 'mate', label: T('한 수로 체크메이트를 만들어보세요.', 'Deliver checkmate in one move.'),
+          ok: T('체크메이트! 이겼어요 🎉', 'Checkmate! You win 🎉'), wrong: MATE_WRONG } },
+      { fen: '7k/R7/8/8/8/8/8/1R4K1',
+        text: T('룩 두 개로 줄줄이 몰아붙이는 "사다리 체크메이트"도 있어요. 한 룩이 벌써 7번 줄을 막고 있어요.', 'Two rooks can also work together in a "ladder checkmate". One rook already controls the 7th row.'),
+        task: { type: 'mate', label: T('체크메이트를 만들어보세요.', 'Deliver checkmate.'),
+          ok: T('사다리 체크메이트 성공! 🎉', 'Ladder checkmate! 🎉'), wrong: MATE_WRONG } }
+    ] },
+    { id: 'special', icon: '✨', title: T('특별한 규칙', 'Special Rules'), pages: [
+      { fen: '4k3/8/8/8/8/8/8/R3K2R', castle: 'KQ',
+        text: T('캐슬링은 킹과 룩이 한꺼번에 움직이는 특별한 수예요. 킹이 룩 쪽으로 두 칸 가고, 룩이 킹을 뛰어넘어요. 킹을 안전하게 지킬 수 있어요.', 'Castling is a special move where the king and a rook move together. The king goes two squares toward a rook, and the rook hops over it. It keeps your king safe.'),
+        task: { type: 'castle', label: T('킹을 옆으로 두 칸 움직여 캐슬링해보세요.', 'Move the king two squares sideways to castle.'),
+          ok: T('캐슬링 성공! 킹이 안전해졌어요.', 'Castled! Your king is safer now.'),
+          wrong: T('킹이 두 칸 움직여야 캐슬링이에요. 다시 해볼까요?', 'The king must move two squares to castle. Try again?') } },
+      { fen: '4k3/8/8/3pP3/8/8/8/4K3', ep: 'd6',
+        text: T('상대 폰이 처음에 두 칸 나와서 내 폰 바로 옆에 서면, 바로 다음 수에 한해서 그 폰을 "지나가며 잡을" 수 있어요. 이걸 "앙파상"이라고 해요.', 'If an enemy pawn jumps two squares and lands right next to your pawn, you may capture it "in passing", but only on your very next move. This is called "en passant".'),
+        task: { type: 'enpassant', goal: ['d6'], label: T('폰을 대각선 ⭐ 칸으로 움직여 앙파상으로 상대 폰을 잡아보세요.', 'Move your pawn diagonally to the ⭐ square and capture the enemy pawn en passant.'),
+          ok: T('앙파상 성공! 아주 특별한 잡기예요.', 'En passant! A very special capture.'),
+          wrong: T('앙파상은 대각선 ⭐ 칸으로 가는 거예요. 다시 해볼까요?', 'En passant goes diagonally to the ⭐ square. Try again?') } },
+      { fen: '4k3/P7/8/8/8/8/8/4K3',
+        text: T('폰이 상대편 맨 끝줄까지 가면 퀸, 룩, 비숍, 나이트 중 하나로 변신해요! 보통은 가장 센 퀸을 골라요.', 'When a pawn reaches the far end of the board, it turns into a queen, rook, bishop or knight! Most players choose the strongest one, the queen.'),
+        task: { type: 'promo', goal: ['a8'], label: T('폰을 ⭐ 칸으로 보내 변신시켜 보세요.', 'Send the pawn to the ⭐ square and promote it.'),
+          ok: T('변신 성공! 폰이 새로운 기물이 되었어요.', 'Promoted! Your pawn is now a brand-new piece.'),
+          wrong: T('폰을 끝줄 ⭐ 칸까지 보내볼까요?', 'Try sending the pawn to the ⭐ square!') } }
+    ] },
+    { id: 'value', icon: '💎', title: T('기물의 점수', 'Piece Values'), pages: [
+      { fen: '8/8/8/8/PNBRQK2/8/8/8',
+        text: T('기물마다 가치(점수)가 달라요. 폰 1점, 나이트와 비숍 3점, 룩 5점, 퀸 9점! 킹은 값을 매길 수 없을 만큼 소중해요. 점수가 높은 기물을 잘 지키고, 상대의 높은 기물을 노려요.', 'Every piece has a different value: pawn 1, knight and bishop 3, rook 5, queen 9! The king is priceless. Protect your high-value pieces and aim at your opponent\'s.') },
+      { fen: '3r3k/p2p4/8/8/3Q4/8/8/7K',
+        text: T('기물을 잡기 전에는 꼭 "그 기물을 누가 지키고 있는지" 확인해요. 지켜지는 기물을 잡으면 내 기물을 잃을 수 있어요.', 'Before you capture, always check whether the piece is protected. If you take a protected piece, you may lose your own piece.'),
+        task: { type: 'moveTo', goal: ['a7'], label: T('아무도 지키지 않는 기물을 공짜로 잡아보세요.', 'Capture a piece that nobody is protecting.'),
+          ok: T('공짜로 폰을 얻었어요! 안전하게 잘 잡았어요.', 'A free pawn! You captured safely.'),
+          wrong: T('앗! 그 폰은 룩이 지키고 있어서 퀸을 잃어요. 아무도 지키지 않는 기물을 찾아봐요.', 'Oops! That pawn is protected by the rook, so you would lose your queen. Look for a piece nobody protects.') } }
+    ] },
+    { id: 'tips', icon: '🏁', title: T('이기는 방법과 시작 요령', 'Winning and Opening Tips'), pages: [
+      { fen: '7k/5Q2/6K1/8/8/8/8/8',
+        text: T('체스의 목표는 상대 킹을 체크메이트하는 거예요. 비기는 경우도 있어요. "스테일메이트"는 체크는 아닌데 움직일 수 있는 수가 하나도 없을 때예요. 그림에서 검은 킹은 갈 곳이 없지만 체크가 아니라서 무승부예요!', 'The goal of chess is to checkmate the enemy king. A game can also end in a draw. "Stalemate" is when a player is not in check but has no legal move. In the picture the black king has nowhere to go but is not in check, so it is a draw!') },
+      { fen: START_FEN,
+        text: T('시작할 때는 가운데 칸을 차지하는 게 좋아요. 가운데를 차지하면 기물들이 더 자유롭게 움직일 수 있어요.', 'At the start of the game, it is good to take the center. Pieces move more freely from there.'),
+        task: { type: 'moveTo', goal: ['e4', 'd4'], goalPiece: 'P', label: T('가운데 폰(d 또는 e)을 두 칸 앞으로 보내보세요.', 'Move a center pawn (d or e) two squares forward.'),
+          ok: T('좋아요! 중앙을 차지했어요.', 'Good! You took the center.'),
+          wrong: T('가운데 줄(d, e)의 폰을 두 칸 움직여봐요!', 'Try moving a pawn in the middle files (d or e) two squares!') } },
+      { fen: 'rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR',
+        text: T('다음엔 나이트와 비숍을 밖으로 꺼내요. 숨어 있으면 힘을 쓰지 못해요.', 'Next, bring out your knights and bishops. Pieces hiding at home cannot help you.'),
+        task: { type: 'moveTo', goal: ['c3', 'f3'], goalPiece: 'N', label: T('나이트를 꺼내보세요. (c3 또는 f3)', 'Bring out a knight. (c3 or f3)'),
+          ok: T('좋아요! 나이트가 활동을 시작했어요.', 'Nice! Your knight is in the game.'),
+          wrong: T('나이트를 ⭐ 칸으로 꺼내볼까요?', 'Try bringing a knight out to a ⭐ square!') } },
+      { fen: 'r1bqk1nr/pppp1ppp/2n5/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R', castle: 'KQ',
+        text: T('마지막으로 킹을 캐슬링으로 안전하게 지켜요. 이 세 가지(중앙, 기물 꺼내기, 캐슬링)만 지켜도 훌륭한 시작이에요!', 'Finally, keep your king safe by castling. Take the center, bring out your pieces, and castle: that is already a great start!'),
+        task: { type: 'castle', label: T('킹을 캐슬링으로 안전하게 지켜보세요.', 'Castle to keep your king safe.'),
+          ok: T('완벽해요! 훌륭한 시작이에요.', 'Perfect! What a great start.'),
+          wrong: T('킹을 옆으로 두 칸 움직여 캐슬링해봐요!', 'Move the king two squares sideways to castle!') } }
+    ] }
+  ];
+  // STUDY-DATA-END
+
+  let SL = null, studyToken = 0;
+  const sBoardEl = document.getElementById('s-board');
+  function Lg(o) { return o[lang]; }
+  function loadDoneLessons() {
+    try { const a = JSON.parse(localStorage.getItem('chess-study-done') || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; }
+  }
+  function markLessonDone(id) {
+    const a = loadDoneLessons();
+    if (a.indexOf(id) === -1) a.push(id);
+    try { localStorage.setItem('chess-study-done', JSON.stringify(a)); } catch (e) {}
+  }
+
+  function showStudyList() {
+    studyToken++;
+    SL = null;
+    document.getElementById('study-list').hidden = false;
+    document.getElementById('study-lesson').hidden = true;
+    renderStudyAll();
+  }
+
+  function renderStudyAll() {
+    if (SL) { renderStudy(); return; }
+    const s = t(), done = loadDoneLessons();
+    const grid = document.getElementById('lesson-grid');
+    grid.innerHTML = '';
+    LESSONS.forEach(function (lesson, i) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'lesson-card';
+      const ico = document.createElement('span'); ico.className = 'ico'; ico.textContent = lesson.icon;
+      const num = document.createElement('span'); num.className = 'num'; num.textContent = s.lessonLabel(i + 1);
+      const tt = document.createElement('span'); tt.className = 'tt'; tt.textContent = Lg(lesson.title);
+      const cnt = document.createElement('span'); cnt.className = 'cnt'; cnt.textContent = s.lessonPages(lesson.pages.length);
+      b.appendChild(ico); b.appendChild(num); b.appendChild(tt); b.appendChild(cnt);
+      if (done.indexOf(lesson.id) !== -1) { const c = document.createElement('span'); c.className = 'chk'; c.textContent = '✓'; b.appendChild(c); }
+      b.addEventListener('click', function () { loadStudyPage(i, 0); });
+      grid.appendChild(b);
+    });
+  }
+
+  function loadStudyPage(li, pi) {
+    studyToken++;
+    const pg = LESSONS[li].pages[pi];
+    SL = { li: li, pi: pi, state: sStateFromPage(pg), sel: null, targets: [], done: !pg.task, tapped: {}, tapSq: null,
+           promoPending: null, locked: false, finished: false, fb: null };
+    document.getElementById('study-list').hidden = true;
+    document.getElementById('study-lesson').hidden = false;
+    window.scrollTo(0, 0);
+    renderStudy();
+  }
+
+  function setFb(fn, cls) { SL.fb = { f: fn, cls: cls || '' }; }
+  function sIsInteractive() {
+    const task = LESSONS[SL.li].pages[SL.pi].task;
+    return !!task && ['tapSquare', 'explore'].indexOf(task.type) === -1 && !SL.done;
+  }
+  function sComplete(okT) {
+    SL.done = true; SL.sel = null; SL.targets = []; SL.promoPending = null;
+    setFb(function () { return Lg(okT); }, 'end');
+    renderStudy();
+  }
+
+  function sOnClick(e) {
+    if (!SL || SL.locked || SL.promoPending || SL.finished) return;
+    const r = Number(e.currentTarget.dataset.r), c = Number(e.currentTarget.dataset.c);
+    const pg = LESSONS[SL.li].pages[SL.pi], task = pg.task, st = SL.state, piece = st.board[r][c];
+    const name = sqName(r, c);
+    if (task && task.type === 'tapSquare') {
+      if (SL.done) return;
+      SL.tapSq = [r, c];
+      if (task.goal.indexOf(name) !== -1) sComplete(task.ok);
+      else { setFb(function () { return t().tapOther(name, task.goal[0]); }, ''); renderStudy(); }
+      return;
+    }
+    if (task && task.type === 'explore' && piece && !SL.done) {
+      SL.tapped[piece.toUpperCase()] = true;
+      const key = piece.toUpperCase();
+      setFb(function () { return Lg(PIECE_INFO[key]); }, '');
+      if (Object.keys(SL.tapped).length >= 6) { sComplete(task.ok); return; }
+    }
+    const interactive = sIsInteractive();
+    if (SL.sel) {
+      const cand = SL.targets.filter(function (m) { return m.tr === r && m.tc === c; });
+      if (cand.length && interactive) { sAttempt(cand[0]); return; }
+      if (piece && (!interactive || isWhite(piece)) && !(SL.sel[0] === r && SL.sel[1] === c)) { SL.sel = [r, c]; SL.targets = legalMoves(st, r, c); }
+      else { SL.sel = null; SL.targets = []; }
+      renderStudy();
+      return;
+    }
+    if (piece && (!interactive || isWhite(piece))) { SL.sel = [r, c]; SL.targets = legalMoves(st, r, c); }
+    renderStudy();
+  }
+
+  function sAttempt(m) {
+    if (m.promo) { SL.promoPending = m; renderStudy(); return; }
+    sResolve(m, null);
+  }
+
+  function sResolve(m, promoChoice) {
+    const pg = LESSONS[SL.li].pages[SL.pi], task = pg.task;
+    const res = applyMove(SL.state, m, promoChoice || 'Q');
+    const ns = res.state, dest = sqName(m.tr, m.tc);
+    let ok = false;
+    switch (task.type) {
+      case 'moveTo': ok = task.goal.indexOf(dest) !== -1 && (!task.goalPiece || m.piece.toUpperCase() === task.goalPiece); break;
+      case 'mate': ok = gameResult(ns).type === 'checkmate'; break;
+      case 'check': ok = gameResult(ns).check; break;
+      case 'castle': ok = !!m.castle; break;
+      case 'enpassant': ok = !!m.ep; break;
+      case 'promo': ok = !!m.promo; break;
+      default: ok = true;
+    }
+    SL.sel = null; SL.targets = []; SL.promoPending = null;
+    if (ok) {
+      SL.state = ns;
+      if (task.type === 'escape') {
+        const key = res.captured ? 'escapeCapture' : (m.piece.toUpperCase() === 'K' ? 'escapeKing' : 'escapeBlock');
+        SL.done = true;
+        setFb(function () { return t()[key]; }, 'end');
+        renderStudy();
+      } else sComplete(task.ok || T('잘했어요! 👏', 'Well done! 👏'));
+      return;
+    }
+    SL.state = ns; SL.locked = true;
+    setFb(function () { return task.wrong ? Lg(task.wrong) : t().defaultWrong; }, 'alert');
+    renderStudy();
+    const tok = studyToken;
+    setTimeout(function () {
+      if (tok !== studyToken || !SL) return;
+      SL.state = sStateFromPage(pg); SL.locked = false;
+      renderStudy();
+    }, 1500);
+  }
+
+  function renderStudy() {
+    if (!SL) return;
+    const s = t(), lesson = LESSONS[SL.li], pg = lesson.pages[SL.pi], task = pg.task, st = SL.state;
+    const goals = (task && task.goal && !SL.done) ? task.goal : [];
+    sBoardEl.innerHTML = '';
+    for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'sq ' + (((r + c) % 2 === 0) ? 'light' : 'dark');
+      cell.dataset.r = r; cell.dataset.c = c;
+      const piece = st.board[r][c];
+      if (piece) {
+        const span = document.createElement('span');
+        span.className = 'piece ' + (isWhite(piece) ? 'white-piece' : 'black-piece');
+        span.textContent = PIECE_GLYPHS[piece];
+        cell.appendChild(span);
+      }
+      if (goals.indexOf(sqName(r, c)) !== -1) cell.classList.add('goal');
+      if ((SL.sel && SL.sel[0] === r && SL.sel[1] === c) || (SL.tapSq && SL.tapSq[0] === r && SL.tapSq[1] === c)) cell.classList.add('selected');
+      const tm = SL.targets.filter(function (m) { return m.tr === r && m.tc === c; });
+      if (tm.length) {
+        const dot = document.createElement('div');
+        dot.className = 'legal-dot' + (tm[0].capture ? ' capture' : '');
+        cell.appendChild(dot);
+      }
+      cell.addEventListener('click', sOnClick);
+      sBoardEl.appendChild(cell);
+    }
+    const rl = document.getElementById('s-rank-labels'), fl = document.getElementById('s-file-labels');
+    rl.innerHTML = ''; fl.innerHTML = '';
+    for (let i = 0; i < 8; i++) {
+      const a = document.createElement('span'); a.textContent = 8 - i; rl.appendChild(a);
+      const f = document.createElement('span'); f.textContent = 'abcdefgh'.charAt(i); fl.appendChild(f);
+    }
+
+    document.getElementById('s-lesson-title').textContent = s.lessonLabel(SL.li + 1) + ' · ' + Lg(lesson.title);
+    document.getElementById('s-page-count').textContent = s.pageCount(SL.pi, lesson.pages.length);
+    const textEl = document.getElementById('s-text'), taskEl = document.getElementById('s-task'), fbEl = document.getElementById('s-feedback');
+    const isLast = SL.pi === lesson.pages.length - 1;
+    const hasNextLesson = SL.li + 1 < LESSONS.length;
+    if (SL.finished) {
+      textEl.textContent = s.lessonDoneTitle + ' ' + s.lessonDoneText(Lg(lesson.title)) + (hasNextLesson ? '' : ' ' + s.allDone);
+      taskEl.hidden = true; fbEl.textContent = ''; fbEl.className = 'status-text';
+    } else {
+      textEl.textContent = Lg(pg.text);
+      if (task) {
+        taskEl.hidden = false;
+        taskEl.textContent = s.missionLabel + ': ' + Lg(task.label) + (task.type === 'explore' ? ' ' + s.exploreProgress(Object.keys(SL.tapped).length) : '');
+      } else taskEl.hidden = true;
+      fbEl.textContent = SL.fb ? SL.fb.f() : '';
+      fbEl.className = 'status-text' + (SL.fb && SL.fb.cls ? ' ' + SL.fb.cls : '');
+    }
+
+    const nextB = document.getElementById('s-next'), skipB = document.getElementById('s-skip'), retryB = document.getElementById('s-retry'), prevB = document.getElementById('s-prev'), listB = document.getElementById('s-list');
+    nextB.hidden = SL.finished && !hasNextLesson;
+    nextB.textContent = SL.finished ? s.nextLesson : (isLast ? s.finishLesson : s.nextPage);
+    nextB.disabled = !SL.finished && !SL.done;
+    skipB.hidden = SL.finished || !task || SL.done; skipB.textContent = s.skipPage;
+    retryB.hidden = SL.finished || !task; retryB.textContent = s.retryPage;
+    prevB.hidden = SL.finished || SL.pi === 0; prevB.textContent = s.prevPage;
+    listB.textContent = s.lessonList;
+    document.getElementById('s-promo-title').textContent = s.promoTitle;
+
+    const ov = document.getElementById('s-promo-overlay'), pc = document.getElementById('s-promo-choices');
+    pc.innerHTML = '';
+    if (SL.promoPending) {
+      ov.hidden = false;
+      ['Q', 'R', 'B', 'N'].forEach(function (p) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'promo-choice on-dark white-piece';
+        btn.textContent = PIECE_GLYPHS[p];
+        btn.addEventListener('click', function () { sResolve(SL.promoPending, p); });
+        pc.appendChild(btn);
+      });
+    } else ov.hidden = true;
+  }
+
+  function sAdvance() {
+    const lesson = LESSONS[SL.li];
+    if (SL.pi === lesson.pages.length - 1) { markLessonDone(lesson.id); SL.finished = true; renderStudy(); }
+    else loadStudyPage(SL.li, SL.pi + 1);
+  }
+  document.getElementById('s-next').addEventListener('click', function () {
+    if (SL.finished) loadStudyPage(SL.li + 1, 0); else sAdvance();
+  });
+  document.getElementById('s-skip').addEventListener('click', function () { sAdvance(); });
+  document.getElementById('s-retry').addEventListener('click', function () { loadStudyPage(SL.li, SL.pi); });
+  document.getElementById('s-prev').addEventListener('click', function () { loadStudyPage(SL.li, SL.pi - 1); });
+  document.getElementById('s-list').addEventListener('click', showStudyList);
+
+  // ---- Fullscreen / immersive play ----
+  function inNativeFs() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+  function updateFullBtn() {
+    const on = document.body.classList.contains('bfull');
+    document.getElementById('b-full').textContent = on ? t().exitFullscreen : t().fullscreen;
+  }
+  function enterFull() {
+    document.body.classList.add('bfull');
+    updateFullBtn();
+    const el = document.documentElement;
+    try {
+      const req = el.requestFullscreen || el.webkitRequestFullscreen;
+      if (req) { const p = req.call(el); if (p && p.catch) p.catch(function () {}); }
+    } catch (e) {}
+    window.scrollTo(0, 0);
+  }
+  function exitFull() {
+    document.body.classList.remove('bfull');
+    updateFullBtn();
+    try {
+      if (inNativeFs()) {
+        const ex = document.exitFullscreen || document.webkitExitFullscreen;
+        if (ex) { const p = ex.call(document); if (p && p.catch) p.catch(function () {}); }
+      }
+    } catch (e) {}
+  }
+  document.getElementById('b-full').addEventListener('click', function () {
+    if (document.body.classList.contains('bfull')) exitFull(); else enterFull();
+  });
+  function onFsChange() {
+    // user left native fullscreen (Esc / swipe) -> leave immersive layout too
+    if (!inNativeFs() && document.body.classList.contains('bfull')) { document.body.classList.remove('bfull'); updateFullBtn(); }
+  }
+  document.addEventListener('fullscreenchange', onFsChange);
+  document.addEventListener('webkitfullscreenchange', onFsChange);
+
+  function showView(v) {
+    if (v !== 'battle' && document.body.classList.contains('bfull')) exitFull();
+    currentView = v;
+    menuView.hidden = v !== 'menu';
+    quizView.hidden = v !== 'quiz';
+    studyView.hidden = v !== 'study';
+    battleView.hidden = v !== 'battle';
+    homeBtn.hidden = v === 'menu';
+    applyStaticStrings();
+    if (v === 'quiz') fullReset();
+    if (v === 'battle') startBattle();
+    if (v === 'study') showStudyList();
+    window.scrollTo(0, 0);
+  }
+  document.getElementById('menu-study').addEventListener('click', function () { showView('study'); });
+  document.getElementById('menu-quiz').addEventListener('click', function () { showView('quiz'); });
+  document.getElementById('menu-battle').addEventListener('click', function () { showView('battle'); });
+  homeBtn.addEventListener('click', function () { showView('menu'); });
+
+  resetBtn.addEventListener('click', fullReset);
+  restartBtn.addEventListener('click', fullReset);
+  langKoBtn.addEventListener('click', function () { setLang('ko'); });
+  langEnBtn.addEventListener('click', function () { setLang('en'); });
+
+  showView('menu');
+})();
+</script>
+</body>
+</html>
