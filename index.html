@@ -255,29 +255,15 @@
     box-shadow: 0 0 0 2px rgba(0,0,0,0.45), inset 0 0 0 2px rgba(255,255,255,0.3);
   }
 
-  .piece {
-    font-size: clamp(24px, 5.2vw, 44px);
-    line-height: 1;
-    pointer-events: none;
-  }
-  .white-piece {
-    color: #fffaf0;
-    text-shadow:
-      -1.4px -1.4px 0 #14151d,
-      1.4px -1.4px 0 #14151d,
-      -1.4px 1.4px 0 #14151d,
-      1.4px 1.4px 0 #14151d,
-      0 3px 4px rgba(0,0,0,0.4);
-  }
-  .black-piece {
-    color: #0b0b10;
-    text-shadow:
-      -1px -1px 0 rgba(255,255,255,0.7),
-      1px -1px 0 rgba(255,255,255,0.7),
-      -1px 1px 0 rgba(255,255,255,0.7),
-      1px 1px 0 rgba(255,255,255,0.7),
-      0 3px 4px rgba(0,0,0,0.35);
-  }
+  /* Pieces are drawn as one consistent SVG set: white = white body + dark outline, black = dark body + white outline */
+  .piece { display: block; pointer-events: none; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.35)); }
+  .sq .piece { width: 88%; aspect-ratio: 1 / 1; }
+  .piece svg { width: 100%; height: 100%; display: block; }
+  .captured-row .piece { width: 30px; height: 30px; filter: none; }
+  .mv-cell { display: inline-flex; align-items: center; gap: 2px; }
+  .mv-ico { width: 22px; height: 22px; display: inline-block; }
+  .mv-ico svg { width: 100%; height: 100%; display: block; }
+  .promo-choice .piece { width: 88%; height: 88%; margin: 0 auto; filter: none; }
 
   .feedback { min-height: 26px; font-size: 14.5px; color: var(--text-muted); line-height: 1.5; }
   .feedback.good { color: var(--accent-good); font-weight: 500; }
@@ -425,6 +411,11 @@
         <span class="menu-icon">📚</span>
         <span class="menu-title" id="menu-study-title"></span>
         <span class="menu-desc" id="menu-study-desc"></span>
+      </button>
+      <button id="menu-tactics" class="menu-card" type="button">
+        <span class="menu-icon">⚡</span>
+        <span class="menu-title" id="menu-tactics-title"></span>
+        <span class="menu-desc" id="menu-tactics-desc"></span>
       </button>
       <button id="menu-quiz" class="menu-card" type="button">
         <span class="menu-icon">🧩</span>
@@ -729,6 +720,9 @@ const ALL_PUZZLES = [
       escapeKing: '① 킹이 피했어요! 체크에서 벗어났어요.',
       escapeCapture: '② 공격하던 룩을 잡았어요! 멋져요.',
       escapeBlock: '③ 사이를 막았어요! 체크에서 벗어났어요.',
+      menuTacticsTitle: '기술', menuTacticsDesc: '포크, 핀, 유인 같은 멋진 체스 기술을 직접 해보면서 배워요.',
+      tacticsTitle: '체스 기술', tacticsSubtitle: '포크, 핀, 스큐어, 유인... 상대를 이기는 기술을 하나씩 익혀봐요!',
+      allDoneTactics: '기술 레슨을 모두 마쳤어요! 이제 퀴즈와 대결에서 써먹어 볼까요? 🏆',
       newGame: '새 게임', undo: '한 수 무르기', flip: '보드 뒤집기',
       movesTitle: '기보', capturedTitle: '잡은 기물',
       capByWhite: '백이 잡음', capByBlack: '흑이 잡음',
@@ -803,6 +797,9 @@ const ALL_PUZZLES = [
       escapeKing: '① The king stepped away! Out of check.',
       escapeCapture: '② You captured the attacking rook! Nice.',
       escapeBlock: '③ You blocked the attack! Out of check.',
+      menuTacticsTitle: 'Tactics', menuTacticsDesc: 'Learn cool tricks like forks, pins and decoys by trying them yourself.',
+      tacticsTitle: 'Chess Tactics', tacticsSubtitle: 'Forks, pins, skewers, decoys... learn the tricks that win games, one by one!',
+      allDoneTactics: 'You finished every tactics lesson! Try them out in the Quiz and the Battle! 🏆',
       newGame: 'New game', undo: 'Undo move', flip: 'Flip board',
       movesTitle: 'Moves', capturedTitle: 'Captured pieces',
       capByWhite: 'Captured by White', capByBlack: 'Captured by Black',
@@ -828,10 +825,28 @@ const ALL_PUZZLES = [
     }
   };
 
-  const PIECE_GLYPHS = {
-    K: '♔', Q: '♕', R: '♖', B: '♗', N: '♘', P: '♙',
-    k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟'
+  // ---- Unified piece set (hand-drawn SVG, same style for every piece) ----
+  const PIECE_SHAPES = {
+    P: { body: '<path d="M39 79 C42 62 44 53 46 45 H54 C56 53 58 62 61 79 Z"/><circle cx="50" cy="30" r="13"/><rect x="34" y="42" width="32" height="8" rx="4"/>', detail: '' },
+    R: { body: '<path d="M33 37 H67 L71 80 H29 Z"/><path d="M25 15 H38 V25 H44 V15 H56 V25 H62 V15 H75 V37 H25 Z"/>', detail: '<path d="M25 37 H75"/>' },
+    B: { body: '<path d="M38 80 C40 66 42 58 44 52 H56 C58 58 60 66 62 80 Z"/><rect x="35" y="50" width="30" height="8" rx="4"/><path d="M50 15 C63 26 67 36 65 44 C63 52 57 52 50 52 C43 52 37 52 35 44 C33 36 37 26 50 15 Z"/><circle cx="50" cy="12" r="5"/>', detail: '<path d="M51 27 L60 40"/>' },
+    N: { body: '<path d="M29 80 C29 66 33 56 42 48 C35 48 30 52 26 56 C23 54 23 49 26 45 C30 38 36 32 40 28 L38 14 L49 23 C55 19 63 21 69 29 C77 40 77 60 73 80 Z"/>', detail: '<path d="M59 27 C67 33 69 44 67 56"/><path d="M28 48 L31 49"/>', eye: '<circle cx="50" cy="33" r="3.2"/>' },
+    Q: { body: '<path d="M27 67 L21 36 L31 54 L35 29 L43 52 L50 24 L57 52 L65 29 L69 54 L79 36 L73 67 Z"/><rect x="28" y="63" width="44" height="9" rx="4.5"/><circle cx="21" cy="32" r="4.8"/><circle cx="35" cy="25" r="4.8"/><circle cx="50" cy="20" r="4.8"/><circle cx="65" cy="25" r="4.8"/><circle cx="79" cy="32" r="4.8"/>', detail: '' },
+    K: { body: '<path d="M32 80 C28 64 34 52 50 44 C66 52 72 64 68 80 Z"/><rect x="31" y="40" width="38" height="9" rx="4.5"/><path d="M45 4 H55 V13 H64 V22 H55 V33 H45 V22 H36 V13 H45 Z"/>', detail: '' }
   };
+  function pieceSvg(piece) {
+    const white = piece === piece.toUpperCase();
+    const sh = PIECE_SHAPES[piece.toUpperCase()];
+    const fill = white ? '#ffffff' : '#20212b';
+    const stroke = white ? '#14141c' : '#ffffff';
+    const detail = white ? '#14141c' : '#ffffff';
+    const sw = white ? 4.2 : 3.4;
+    return '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+      '<g fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '" stroke-linejoin="round" stroke-linecap="round">' + sh.body +
+      '<rect x="21" y="79" width="58" height="11" rx="5.5"/></g>' +
+      '<g fill="none" stroke="' + detail + '" stroke-width="3" stroke-linecap="round">' + sh.detail + '</g>' +
+      (sh.eye ? '<g fill="' + detail + '" stroke="none">' + sh.eye + '</g>' : '') + '</svg>';
+  }
   const DIFF_POINTS = { easy: 10, medium: 25, hard: 45 };
   const WRONG_PENALTY = { easy: 5, medium: 8, hard: 12 };
 
@@ -996,9 +1011,12 @@ const ALL_PUZZLES = [
     const s = t();
     if (currentView === 'menu') { titleEl.textContent = s.menuTitle; subtitleEl.textContent = s.menuSubtitle; }
     else if (currentView === 'study') { titleEl.textContent = s.studyTitle; subtitleEl.textContent = s.studySubtitle; }
+    else if (currentView === 'tactics') { titleEl.textContent = s.tacticsTitle; subtitleEl.textContent = s.tacticsSubtitle; }
     else if (currentView === 'battle') { titleEl.textContent = s.battleTitle; subtitleEl.textContent = s.battleSubtitle; }
     else { titleEl.textContent = s.title; subtitleEl.textContent = s.subtitle; }
     homeBtn.textContent = s.home;
+    document.getElementById('menu-tactics-title').textContent = s.menuTacticsTitle;
+    document.getElementById('menu-tactics-desc').textContent = s.menuTacticsDesc;
     document.getElementById('menu-study-title').textContent = s.menuStudyTitle;
     document.getElementById('menu-study-desc').textContent = s.menuStudyDesc;
     document.getElementById('menu-quiz-title').textContent = s.menuQuizTitle;
@@ -1041,7 +1059,7 @@ const ALL_PUZZLES = [
     applyStaticStrings();
     if (currentView === 'quiz') applyPuzzleStrings();
     if (currentView === 'battle') renderBattle();
-    if (currentView === 'study') renderStudyAll();
+    if (currentView === 'study' || currentView === 'tactics') renderStudyAll();
   }
 
   function loadPuzzle() {
@@ -1092,8 +1110,8 @@ const ALL_PUZZLES = [
         const piece = board[r][c];
         if (piece) {
           const span = document.createElement('span');
-          span.className = 'piece ' + (isWhite(piece) ? 'white-piece' : 'black-piece');
-          span.textContent = PIECE_GLYPHS[piece];
+          span.className = 'piece';
+          span.innerHTML = pieceSvg(piece);
           cell.appendChild(span);
         }
         if (selected && selected[0] === r && selected[1] === c) cell.classList.add('selected');
@@ -1404,14 +1422,33 @@ const ALL_PUZZLES = [
   }
 
   function notate(m, captured, promoChoice, res) {
-    let txt;
-    if (m.castle) txt = m.castle === 'K' ? 'O-O' : 'O-O-O';
+    const e = { piece: null, core: '', promo: null, suffix: '' };
+    if (m.castle) e.core = m.castle === 'K' ? 'O-O' : 'O-O-O';
     else {
-      txt = PIECE_GLYPHS[m.piece] + sqName(m.fr, m.fc) + (captured ? 'x' : '→') + sqName(m.tr, m.tc);
-      if (m.promo) txt += '=' + PIECE_GLYPHS[isWhite(m.piece) ? promoChoice : promoChoice.toLowerCase()];
+      e.piece = m.piece;
+      e.core = sqName(m.fr, m.fc) + (captured ? 'x' : '→') + sqName(m.tr, m.tc);
+      if (m.promo) e.promo = isWhite(m.piece) ? promoChoice : promoChoice.toLowerCase();
     }
-    if (res.type === 'checkmate') txt += '#'; else if (res.check) txt += '+';
-    return txt;
+    e.suffix = res.type === 'checkmate' ? '#' : (res.check ? '+' : '');
+    return e;
+  }
+
+  function moveIcon(p) {
+    const ic = document.createElement('span');
+    ic.className = 'mv-ico';
+    ic.innerHTML = pieceSvg(p);
+    return ic;
+  }
+  function moveCell(entry) {
+    const cell = document.createElement('span');
+    cell.className = 'mv-cell';
+    if (!entry) return cell;
+    const mv = entry.mv;
+    if (mv.piece) cell.appendChild(moveIcon(mv.piece));
+    cell.appendChild(document.createTextNode(mv.core));
+    if (mv.promo) { cell.appendChild(document.createTextNode('=')); cell.appendChild(moveIcon(mv.promo)); }
+    if (mv.suffix) cell.appendChild(document.createTextNode(mv.suffix));
+    return cell;
   }
 
   function bExecute(m, promoChoice) {
@@ -1420,7 +1457,7 @@ const ALL_PUZZLES = [
     if (res.captured) G.captured[isWhite(res.captured) ? 'w' : 'b'].push(res.captured);
     G.state = res.state;
     G.status = gameResult(G.state);
-    G.moveList.push({ white: isWhite(m.piece), text: notate(m, res.captured, promoChoice || 'Q', G.status) });
+    G.moveList.push({ white: isWhite(m.piece), mv: notate(m, res.captured, promoChoice || 'Q', G.status) });
     G.last = [[m.fr, m.fc], [m.tr, m.tc]];
     bSel = null; bTargets = []; bPendingPromo = null;
     renderBattle();
@@ -1458,8 +1495,8 @@ const ALL_PUZZLES = [
       const piece = st.board[r][c];
       if (piece) {
         const span = document.createElement('span');
-        span.className = 'piece ' + (isWhite(piece) ? 'white-piece' : 'black-piece');
-        span.textContent = PIECE_GLYPHS[piece];
+        span.className = 'piece';
+        span.innerHTML = pieceSvg(piece);
         cell.appendChild(span);
       }
       if (G.last && ((G.last[0][0] === r && G.last[0][1] === c) || (G.last[1][0] === r && G.last[1][1] === c))) cell.classList.add('last');
@@ -1499,8 +1536,8 @@ const ALL_PUZZLES = [
       el.innerHTML = '';
       list.slice().sort(function (a, b2) { return order[a.toUpperCase()] - order[b2.toUpperCase()]; }).forEach(function (p) {
         const sp = document.createElement('span');
-        sp.className = isWhite(p) ? 'white-piece' : 'black-piece';
-        sp.textContent = PIECE_GLYPHS[p];
+        sp.className = 'piece';
+        sp.innerHTML = pieceSvg(p);
         el.appendChild(sp);
       });
     }
@@ -1515,8 +1552,8 @@ const ALL_PUZZLES = [
       for (let i = 0; i < G.moveList.length; i += 2) {
         const row = document.createElement('div'); row.className = 'move-row';
         const n = document.createElement('span'); n.className = 'n'; n.textContent = (i / 2 + 1) + '.';
-        const a = document.createElement('span'); a.textContent = G.moveList[i].text;
-        const b2 = document.createElement('span'); b2.textContent = G.moveList[i + 1] ? G.moveList[i + 1].text : '';
+        const a = moveCell(G.moveList[i]);
+        const b2 = moveCell(G.moveList[i + 1]);
         row.appendChild(n); row.appendChild(a); row.appendChild(b2);
         mv.appendChild(row);
       }
@@ -1532,8 +1569,8 @@ const ALL_PUZZLES = [
       ['Q', 'R', 'B', 'N'].forEach(function (p) {
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'promo-choice ' + (white ? 'on-dark white-piece' : 'on-light black-piece');
-        btn.textContent = PIECE_GLYPHS[white ? p : p.toLowerCase()];
+        btn.className = 'promo-choice ' + (white ? 'on-dark' : 'on-light');
+        btn.innerHTML = '<span class=\"piece\">' + pieceSvg(white ? p : p.toLowerCase()) + '</span>';
         btn.addEventListener('click', function () { bExecute(bPendingPromo, p); });
         pc.appendChild(btn);
       });
@@ -1726,16 +1763,22 @@ const ALL_PUZZLES = [
   ];
   // STUDY-DATA-END
 
+  // TACTICS-DATA-START
+  const TACTICS = [{"id":"fork","icon":"🍴","title":{"ko":"포크 (두 개를 한꺼번에!)","en":"The Fork"},"pages":[{"fen":"6k1/5ppp/2q5/3N4/8/8/8/6K1 w - - 0 1","text":{"ko":"\"포크\"는 한 기물로 상대 기물 두 개를 동시에 공격하는 기술이에요. 상대는 한 번에 하나만 구할 수 있으니, 나머지 하나를 잡을 수 있어요! 나이트는 포크를 가장 잘 만드는 기물이에요.","en":"A \"fork\" is when one piece attacks two enemy pieces at the same time. Your opponent can only save one, so you win the other! Knights are the best forkers."},"task":{"type":"moveTo","goal":["e7"],"goalPiece":"N","reply":"g8h8","label":{"ko":"나이트로 킹과 퀸을 동시에 공격할 수 있는 칸(⭐)으로 점프해보세요.","en":"Jump the knight to the ⭐ square to attack the king and the queen at once."},"ok":{"ko":"포크 성공! 킹이 체크를 받아서 피했어요. 이제 퀸을 잡을 차례예요!","en":"Fork! The king had to run away. Now take the queen!"},"wrong":{"ko":"그 수로는 두 기물을 동시에 공격하지 못해요. ⭐ 칸을 찾아보세요!","en":"That does not attack two pieces at once. Look for the ⭐ square!"},"then":{"type":"moveTo","goal":["c6"],"label":{"ko":"이제 나이트로 퀸을 잡아보세요!","en":"Now capture the queen with your knight!"},"ok":{"ko":"퀸을 얻었어요! 포크 덕분에 큰 이득을 봤어요 🎉","en":"You won the queen! The fork paid off 🎉"},"wrong":{"ko":"퀸을 잡아야 해요! ⭐ 를 찾아보세요.","en":"Take the queen! Look for the ⭐."}}}},{"fen":"6k1/8/1r1r4/8/2P5/8/8/6K1 w - - 0 1","text":{"ko":"폰도 포크를 할 수 있어요! 폰이 앞으로 나아가서 대각선 앞의 기물 두 개를 동시에 노릴 수 있어요.","en":"Pawns can fork too! A pawn can step forward and attack two pieces diagonally in front."},"task":{"type":"moveTo","goal":["c5"],"reply":"b6b3","label":{"ko":"폰을 한 칸 앞으로 보내 두 룩을 동시에 노려보세요.","en":"Push the pawn one square to attack both rooks."},"ok":{"ko":"폰 포크! 상대가 한 룩을 피했어요. 남은 룩을 잡아요!","en":"Pawn fork! One rook ran away. Take the other one!"},"wrong":{"ko":"폰을 ⭐ 칸으로 한 칸 전진시켜 보세요.","en":"Push the pawn one step to the ⭐ square."},"then":{"type":"moveTo","goal":["d6"],"label":{"ko":"폰으로 남은 룩을 잡아보세요!","en":"Capture the other rook with your pawn!"},"ok":{"ko":"룩을 얻었어요! 폰 하나로 룩을 이겼어요 🎉","en":"You won a rook with just a pawn! 🎉"},"wrong":{"ko":"폰은 대각선으로 잡아요. ⭐ 를 찾아보세요.","en":"Pawns capture diagonally. Look for the ⭐."}}}},{"fen":"r5k1/6pp/8/8/8/8/5PPP/3Q2K1 w - - 0 1","text":{"ko":"퀸도 멋진 포크를 만들어요. 특히 \"체크\"를 하면서 동시에 다른 기물도 공격하면, 상대는 무조건 킹을 먼저 지켜야 해요!","en":"The queen can fork too. If she gives check while also attacking another piece, your opponent must save the king first!"},"task":{"type":"moveTo","goal":["d5"],"goalPiece":"Q","reply":"g8h8","label":{"ko":"퀸으로 체크를 하면서 룩도 노릴 수 있는 칸(⭐)으로 가보세요.","en":"Move the queen to the ⭐ square: check the king and attack the rook!"},"ok":{"ko":"체크 포크! 킹이 피했어요. 룩을 잡을 수 있어요!","en":"Check and fork! The king moved. Now grab the rook!"},"wrong":{"ko":"체크를 하면서 룩도 노리는 칸을 찾아보세요. 대각선을 살펴봐요!","en":"Find the square that checks the king and hits the rook. Look at the diagonal!"},"then":{"type":"moveTo","goal":["a8"],"label":{"ko":"퀸으로 룩을 잡아보세요!","en":"Capture the rook with your queen!"},"ok":{"ko":"룩을 얻었어요! 🎉","en":"You won the rook! 🎉"},"wrong":{"ko":"⭐ 의 룩을 잡아보세요.","en":"Capture the rook on the ⭐."}}}}]},{"id":"pin","icon":"📌","title":{"ko":"핀 (꼼짝 못 하게!)","en":"The Pin"},"pages":[{"fen":"4k3/3n4/8/8/2B5/8/8/6K1 w - - 0 1","text":{"ko":"\"핀\"은 상대 기물을 못 움직이게 묶어두는 기술이에요. 뒤에 킹이 있으면 그 기물은 움직일 수 없어요. 움직이면 킹이 공격받게 되니까요!","en":"A \"pin\" ties an enemy piece down. If the king is right behind it, that piece cannot move at all, because the king would be attacked!"},"task":{"type":"moveTo","goal":["b5"],"goalPiece":"B","label":{"ko":"비숍으로 나이트를 킹 앞에 꼼짝 못 하게 핀해보세요.","en":"Pin the knight to the king with your bishop."},"ok":{"ko":"핀 성공! 나이트는 움직일 수 없어요. 움직이면 킹이 잡혀요!","en":"Pinned! The knight cannot move or the king would be in danger!"},"wrong":{"ko":"비숍을 나이트와 킹이 한 줄에 놓이는 칸으로 보내보세요. ⭐ 를 찾아봐요.","en":"Put the bishop on the same diagonal as the knight and king. Find the ⭐!"}}},{"fen":"3q2k1/5ppp/5n2/8/8/8/8/2B3K1 w - - 0 1","text":{"ko":"킹이 아니라 \"퀸\" 같은 중요한 기물 앞에 핀을 만들 수도 있어요. 이 경우 나이트가 움직일 수는 있지만, 움직이면 퀸을 잃어요!","en":"You can pin a piece in front of something valuable, like a queen. The knight CAN move, but then you take the queen!"},"task":{"type":"moveTo","goal":["g5"],"goalPiece":"B","reply":"f6e4","label":{"ko":"비숍을 ⭐ 칸으로 보내 나이트를 퀸 앞에 핀해보세요.","en":"Move the bishop to the ⭐ square to pin the knight to the queen."},"ok":{"ko":"핀 성공! 그런데 상대가 핀된 나이트를 움직여 버렸어요!","en":"Pinned! But your opponent moved the pinned knight anyway!"},"wrong":{"ko":"나이트와 퀸이 한 대각선에 놓이는 칸을 찾아보세요.","en":"Find the square that lines up the knight and the queen on a diagonal."},"then":{"type":"moveTo","goal":["d8"],"label":{"ko":"비숍으로 퀸을 잡아보세요!","en":"Capture the queen with your bishop!"},"ok":{"ko":"퀸을 얻었어요! 핀을 무시하면 이렇게 돼요 🎉","en":"You won the queen! This is what happens when you ignore a pin 🎉"},"wrong":{"ko":"⭐ 의 퀸을 잡아보세요.","en":"Capture the queen on the ⭐."}}}},{"fen":"4k3/8/8/4n3/3P4/8/8/4R1K1 w - - 0 1","text":{"ko":"핀된 기물은 도망갈 수 없어서 공격하기 좋은 목표예요. 폰처럼 약한 기물로도 잡을 수 있어요!","en":"A pinned piece cannot run away, so it is a great target. Even a weak pawn can capture it!"},"task":{"type":"moveTo","goal":["e5"],"label":{"ko":"핀된 나이트를 잡아보세요!","en":"Capture the pinned knight!"},"ok":{"ko":"나이트를 잡았어요! 핀된 기물은 도망칠 수 없죠.","en":"Knight captured! A pinned piece cannot escape."},"wrong":{"ko":"룩에 핀된 나이트(⭐)를 잡아보세요.","en":"Capture the knight (⭐) that is pinned by the rook."}}}]},{"id":"skewer","icon":"🍢","title":{"ko":"스큐어 (꼬치 꿰기)","en":"The Skewer"},"pages":[{"fen":"7r/8/8/7k/8/8/6K1/R7 w - - 0 1","text":{"ko":"\"스큐어\"는 핀과 반대예요. 중요한 기물을 먼저 공격해서 비키게 만들고, 그 뒤에 숨은 기물을 잡는 기술이에요. 꼬치처럼 꿰는 거예요!","en":"A \"skewer\" is the opposite of a pin. You attack a valuable piece so it must move, then you capture the piece hiding behind it. Like a kebab!"},"task":{"type":"moveTo","goal":["h1"],"goalPiece":"R","reply":"h5g5","label":{"ko":"룩으로 킹에게 체크를 걸어요. 킹 뒤에 숨은 룩이 보이나요? (⭐)","en":"Check the king with your rook. Can you see the rook hiding behind it? (⭐)"},"ok":{"ko":"스큐어 성공! 킹이 피하면 뒤의 룩이 무방비예요.","en":"Skewer! When the king moves, the rook behind is defenseless."},"wrong":{"ko":"킹과 뒤의 룩이 한 줄(h줄)에 있어요. 그 줄 끝에서 체크해보세요.","en":"The king and the rook stand on the same file (h). Check from the other end of that file."},"then":{"type":"moveTo","goal":["h8"],"label":{"ko":"룩으로 뒤에 있던 룩을 잡아보세요!","en":"Capture the rook that was hiding behind!"},"ok":{"ko":"룩을 얻었어요! 스큐어 대성공 🎉","en":"You won the rook! Great skewer 🎉"},"wrong":{"ko":"⭐ 의 룩을 잡아보세요.","en":"Capture the rook on the ⭐."}}}},{"fen":"5r2/8/3k4/8/8/8/8/2B3K1 w - - 0 1","text":{"ko":"비숍도 스큐어를 할 수 있어요. 대각선에 킹과 룩이 나란히 있을 때를 찾아봐요.","en":"Bishops can skewer too. Look for a king and a rook lined up on a diagonal."},"task":{"type":"moveTo","goal":["a3"],"goalPiece":"B","reply":"d6d5","label":{"ko":"비숍을 ⭐ 칸으로 보내 킹에게 체크를 걸고 뒤의 룩을 노려보세요.","en":"Send the bishop to the ⭐ square: check the king and hit the rook behind it."},"ok":{"ko":"스큐어! 킹이 피했어요. 룩을 잡을 수 있어요!","en":"Skewer! The king moved away. Take the rook!"},"wrong":{"ko":"킹과 룩이 있는 대각선에 비숍을 올려보세요.","en":"Put the bishop on the diagonal with the king and rook."},"then":{"type":"moveTo","goal":["f8"],"label":{"ko":"비숍으로 룩을 잡아보세요!","en":"Capture the rook with your bishop!"},"ok":{"ko":"룩을 얻었어요! 🎉","en":"You won the rook! 🎉"},"wrong":{"ko":"⭐ 의 룩을 잡아보세요.","en":"Capture the rook on the ⭐."}}}}]},{"id":"discover","icon":"🎭","title":{"ko":"디스커버드 어택 (숨은 공격)","en":"Discovered Attack"},"pages":[{"fen":"4k3/1q6/8/8/4B3/8/8/4R1K1 w - - 0 1","text":{"ko":"\"디스커버드 어택\"은 앞에 있는 기물을 비켜서 뒤에 숨어 있던 기물이 공격하게 만드는 기술이에요. 지금 비숍이 룩 앞을 막고 있어요. 비숍이 움직이면 룩이 킹을 공격해요!","en":"A \"discovered attack\" happens when you move a piece out of the way and let the piece behind it attack. Your bishop is blocking the rook. When it moves, the rook attacks the king!"},"task":{"type":"moveTo","goal":["b7"],"goalPiece":"B","label":{"ko":"비숍으로 퀸을 잡아서 룩의 체크도 함께 만들어보세요!","en":"Capture the queen with the bishop and reveal the rook's check at the same time!"},"ok":{"ko":"디스커버드 체크! 킹이 체크를 받아서 퀸을 지킬 수가 없어요. 퀸을 공짜로 얻었어요! 🎉","en":"Discovered check! The king is in check, so the queen could not be saved. You won her for free! 🎉"},"wrong":{"ko":"비숍이 비켜서면서 퀸도 잡을 수 있는 칸을 찾아보세요.","en":"Find the square where the bishop captures the queen as it moves out of the way."}}},{"fen":"3q4/5pk1/8/8/3N4/8/8/3R2K1 w - - 0 1","text":{"ko":"이번엔 나이트가 룩 앞에 있어요. 나이트가 체크를 하면서 비키면, 상대는 체크를 먼저 피해야 해서 룩이 퀸을 공격하는 걸 막을 수 없어요!","en":"Now the knight is in front of the rook. If the knight moves with check, your opponent has to answer the check first and cannot stop the rook from hitting the queen!"},"task":{"type":"moveTo","goal":["f5","e6"],"goalPiece":"N","reply":"g7g8","label":{"ko":"나이트로 킹에게 체크를 걸면서 룩의 길을 열어주세요.","en":"Give check with the knight while opening the rook's path."},"ok":{"ko":"디스커버드 어택 성공! 킹이 체크를 피했고, 이제 룩이 퀸을 노려요!","en":"Discovered attack! The king stepped away, and now the rook hits the queen!"},"wrong":{"ko":"나이트가 킹에게 체크를 걸 수 있는 칸을 찾아보세요. (⭐)","en":"Find the square where the knight checks the king. (⭐)"},"then":{"type":"moveTo","goal":["d8"],"label":{"ko":"룩으로 퀸을 잡아보세요!","en":"Capture the queen with your rook!"},"ok":{"ko":"퀸을 얻었어요! 숨은 공격이 대성공이에요 🎉","en":"You won the queen! The hidden attack worked 🎉"},"wrong":{"ko":"⭐ 의 퀸을 잡아보세요.","en":"Capture the queen on the ⭐."}}}}]},{"id":"decoy","icon":"🎣","title":{"ko":"유인 (미끼를 던져요)","en":"The Decoy"},"pages":[{"fen":"5r1k/6pp/7N/8/8/8/Q7/6K1 w - - 0 1","text":{"ko":"\"유인\"은 일부러 기물을 내주어서 상대 기물을 내가 원하는 칸으로 끌어당기는 기술이에요. 미끼를 물면 더 큰 이득이 와요! 여기서는 퀸을 미끼로 주면, 검은 룩이 잡을 수밖에 없고 그러면 나이트 한 방에 킹이 잡혀요 (스머더드 메이트).","en":"A \"decoy\" is when you give up a piece on purpose to pull an enemy piece to the square you want. If they bite, you win much more! Here the queen is the bait: the black rook must take her, and then one knight move traps the king (a \"smothered mate\")."},"task":{"type":"moveTo","goal":["g8"],"goalFrom":"a2","reply":"f8g8","label":{"ko":"퀸을 ⭐ 칸으로 보내 체크! 일부러 내주는 수예요.","en":"Send the queen to the ⭐ square with check. This is a sacrifice on purpose!"},"ok":{"ko":"미끼 성공! 킹은 나이트가 지키는 칸의 퀸을 잡을 수 없어서 룩이 잡을 수밖에 없었어요.","en":"The bait worked! The king cannot take the queen (the knight guards that square), so the rook had to."},"wrong":{"ko":"그 수는 아니에요. ⭐ 칸을 찾아보세요! (미끼를 던질 칸이에요)","en":"Not that one. Find the ⭐ square! (That is where the bait goes.)"},"then":{"type":"mate","label":{"ko":"마지막 한 수예요! 체크메이트가 되는 수를 찾아보세요.","en":"One last move! Find the move that gives checkmate."},"ok":{"ko":"스머더드 메이트! 킹이 자기 기물들에 갇혔어요 🎉","en":"Smothered mate! The king is trapped by its own pieces 🎉"},"wrong":{"ko":"나이트로 체크메이트를 만들어보세요!","en":"Deliver checkmate with the knight!"}}}},{"fen":"k3n3/pp1N4/8/8/8/8/Q2R3K/8 w - - 0 1","text":{"ko":"이번엔 킹을 미끼로 유인해요. 퀸을 a7에 내주면 킹이 잡으러 올 수밖에 없어요. 그러면 킹이 a7 칸에 서게 되죠!","en":"This time we lure the king. If you give your queen on a7, the king has to take it, and that puts the king on a7!"},"task":{"type":"moveTo","goal":["a7"],"goalFrom":"a2","reply":"a8a7","label":{"ko":"퀸으로 ⭐ 의 폰을 잡으면서 체크해보세요. (퀸을 내주는 수예요)","en":"Capture the pawn on the ⭐ square with check. (You are giving up the queen!)"},"ok":{"ko":"킹이 퀸을 잡고 a7 칸으로 끌려왔어요! 이제 마무리예요.","en":"The king took the queen and was pulled to a7! Time to finish."},"wrong":{"ko":"그 수는 아니에요. ⭐ 칸을 찾아보세요! (미끼를 던질 칸이에요)","en":"Not that one. Find the ⭐ square! (That is where the bait goes.)"},"then":{"type":"mate","label":{"ko":"마지막 한 수예요! 체크메이트가 되는 수를 찾아보세요.","en":"One last move! Find the move that gives checkmate."},"ok":{"ko":"체크메이트! 킹을 끌어내서 이겼어요 🎉","en":"Checkmate! Luring the king won the game 🎉"},"wrong":{"ko":"룩으로 체크메이트를 만들어보세요! 킹이 갈 곳을 막아봐요.","en":"Checkmate with the rook! Take away the king's squares."}}}},{"fen":"k7/pp1Nn3/8/8/8/3R4/K7/6Q1 w - - 0 1","text":{"ko":"같은 아이디어를 한 번 더 연습해요. 멀리 있는 퀸이 a7로 날아가서 킹을 끌어내요.","en":"Let us practice the same idea once more. The far-away queen flies to a7 to pull out the king."},"task":{"type":"moveTo","goal":["a7"],"goalFrom":"g1","reply":"a8a7","label":{"ko":"퀸으로 ⭐ 의 폰을 잡아 킹을 유인해보세요.","en":"Capture the pawn on the ⭐ square with your queen to lure the king."},"ok":{"ko":"킹이 미끼를 물었어요!","en":"The king took the bait!"},"wrong":{"ko":"그 수는 아니에요. ⭐ 칸을 찾아보세요! (미끼를 던질 칸이에요)","en":"Not that one. Find the ⭐ square! (That is where the bait goes.)"},"then":{"type":"mate","label":{"ko":"마지막 한 수예요! 체크메이트가 되는 수를 찾아보세요.","en":"One last move! Find the move that gives checkmate."},"ok":{"ko":"체크메이트! 🎉","en":"Checkmate! 🎉"},"wrong":{"ko":"룩으로 체크메이트를 만들어보세요!","en":"Deliver checkmate with the rook!"}}}}]},{"id":"deflect","icon":"🧲","title":{"ko":"수비수 끌어내기","en":"Deflection"},"pages":[{"fen":"1r5k/6pp/3R4/3Q4/8/2R5/7K/8 w - - 0 1","text":{"ko":"상대가 중요한 칸을 지키고 있다면, 그 기물을 미끼로 유혹해서 자리를 떠나게 해요. 이걸 \"수비수 끌어내기\"라고 해요. 지금 검은 룩이 8번째 줄을 지키고 있어요. 룩을 내주면 그 룩을 잡으러 나올 수밖에 없어요!","en":"If the enemy guards an important square, tempt that piece away with bait. This is called \"deflection\". Right now the black rook guards the 8th row. Offer your rook and it has to take it!"},"task":{"type":"moveTo","goal":["d8"],"goalFrom":"d6","reply":"b8d8","label":{"ko":"룩을 ⭐ 칸으로 보내 체크! 상대 룩을 끌어내요.","en":"Send the rook to the ⭐ square with check to pull the enemy rook away."},"ok":{"ko":"상대 룩이 미끼를 물고 자리를 떠났어요!","en":"The enemy rook took the bait and left its post!"},"wrong":{"ko":"그 수는 아니에요. ⭐ 칸을 찾아보세요! (미끼를 던질 칸이에요)","en":"Not that one. Find the ⭐ square! (That is where the bait goes.)"},"then":{"type":"mate","label":{"ko":"마지막 한 수예요! 체크메이트가 되는 수를 찾아보세요.","en":"One last move! Find the move that gives checkmate."},"ok":{"ko":"체크메이트! 수비수를 끌어내서 이겼어요 🎉","en":"Checkmate! Deflecting the defender won 🎉"},"wrong":{"ko":"퀸으로 체크메이트를 만들어보세요!","en":"Deliver checkmate with the queen!"}}}},{"fen":"6k1/2r2pp1/3n4/7R/4R3/4Q3/8/3K4 w - - 0 1","text":{"ko":"이번엔 나이트가 e8 칸을 지키고 있어요. 룩을 e8에 보내면 나이트가 잡으러 가야 해요. 그러면 퀸이 e8로 올라와서 마무리!","en":"This time a knight guards the e8 square. Send your rook to e8 and the knight has to take it. Then the queen jumps in to finish!"},"task":{"type":"moveTo","goal":["e8"],"goalFrom":"e4","reply":"d6e8","label":{"ko":"룩을 ⭐ 칸으로 보내 나이트를 끌어내보세요.","en":"Send the rook to the ⭐ square to pull the knight away."},"ok":{"ko":"나이트가 자리를 떠났어요!","en":"The knight left its post!"},"wrong":{"ko":"그 수는 아니에요. ⭐ 칸을 찾아보세요! (미끼를 던질 칸이에요)","en":"Not that one. Find the ⭐ square! (That is where the bait goes.)"},"then":{"type":"mate","label":{"ko":"마지막 한 수예요! 체크메이트가 되는 수를 찾아보세요.","en":"One last move! Find the move that gives checkmate."},"ok":{"ko":"체크메이트! 🎉","en":"Checkmate! 🎉"},"wrong":{"ko":"퀸으로 체크메이트를 만들어보세요!","en":"Deliver checkmate with the queen!"}}}},{"fen":"k7/pp2q3/8/6Q1/8/8/8/1K1R3R w - - 0 1","text":{"ko":"퀸처럼 힘센 기물도 미끼에 끌려올 수 있어요! 검은 퀸이 8번째 줄을 지키고 있어요. 룩을 내주면 퀸이 잡으러 와야 해요.","en":"Even a powerful queen can be dragged away by bait! The black queen guards the 8th row. Offer a rook and she has to take it."},"task":{"type":"moveTo","goal":["d8"],"goalFrom":"d1","reply":"e7d8","label":{"ko":"룩을 ⭐ 칸으로 보내 상대 퀸을 끌어내보세요.","en":"Send the rook to the ⭐ square to drag the enemy queen away."},"ok":{"ko":"퀸이 미끼를 물었어요!","en":"The queen took the bait!"},"wrong":{"ko":"그 수는 아니에요. ⭐ 칸을 찾아보세요! (미끼를 던질 칸이에요)","en":"Not that one. Find the ⭐ square! (That is where the bait goes.)"},"then":{"type":"mate","label":{"ko":"마지막 한 수예요! 체크메이트가 되는 수를 찾아보세요.","en":"One last move! Find the move that gives checkmate."},"ok":{"ko":"체크메이트! 룩을 내주고 퀸을 끌어내서 이겼어요 🎉","en":"Checkmate! You gave a rook, dragged the queen away, and won 🎉"},"wrong":{"ko":"퀸으로 체크메이트를 만들어보세요!","en":"Deliver checkmate with the queen!"}}}}]}];
+  // TACTICS-DATA-END
+
   let SL = null, studyToken = 0;
+  function curLessons() { return currentView === 'tactics' ? TACTICS : LESSONS; }
+  function curKey() { return currentView === 'tactics' ? 'chess-tactics-done' : 'chess-study-done'; }
   const sBoardEl = document.getElementById('s-board');
   function Lg(o) { return o[lang]; }
   function loadDoneLessons() {
-    try { const a = JSON.parse(localStorage.getItem('chess-study-done') || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; }
+    try { const a = JSON.parse(localStorage.getItem(curKey()) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; }
   }
   function markLessonDone(id) {
     const a = loadDoneLessons();
     if (a.indexOf(id) === -1) a.push(id);
-    try { localStorage.setItem('chess-study-done', JSON.stringify(a)); } catch (e) {}
+    try { localStorage.setItem(curKey(), JSON.stringify(a)); } catch (e) {}
   }
 
   function showStudyList() {
@@ -1751,7 +1794,7 @@ const ALL_PUZZLES = [
     const s = t(), done = loadDoneLessons();
     const grid = document.getElementById('lesson-grid');
     grid.innerHTML = '';
-    LESSONS.forEach(function (lesson, i) {
+    curLessons().forEach(function (lesson, i) {
       const b = document.createElement('button');
       b.type = 'button'; b.className = 'lesson-card';
       const ico = document.createElement('span'); ico.className = 'ico'; ico.textContent = lesson.icon;
@@ -1767,8 +1810,9 @@ const ALL_PUZZLES = [
 
   function loadStudyPage(li, pi) {
     studyToken++;
-    const pg = LESSONS[li].pages[pi];
-    SL = { li: li, pi: pi, state: sStateFromPage(pg), sel: null, targets: [], done: !pg.task, tapped: {}, tapSq: null,
+    const pg = curLessons()[li].pages[pi];
+    const st0 = sStateFromPage(pg);
+    SL = { li: li, pi: pi, state: st0, stageState: st0, task: pg.task, last: null, sel: null, targets: [], done: !pg.task, tapped: {}, tapSq: null,
            promoPending: null, locked: false, finished: false, fb: null };
     document.getElementById('study-list').hidden = true;
     document.getElementById('study-lesson').hidden = false;
@@ -1778,7 +1822,7 @@ const ALL_PUZZLES = [
 
   function setFb(fn, cls) { SL.fb = { f: fn, cls: cls || '' }; }
   function sIsInteractive() {
-    const task = LESSONS[SL.li].pages[SL.pi].task;
+    const task = SL.task;
     return !!task && ['tapSquare', 'explore'].indexOf(task.type) === -1 && !SL.done;
   }
   function sComplete(okT) {
@@ -1790,7 +1834,7 @@ const ALL_PUZZLES = [
   function sOnClick(e) {
     if (!SL || SL.locked || SL.promoPending || SL.finished) return;
     const r = Number(e.currentTarget.dataset.r), c = Number(e.currentTarget.dataset.c);
-    const pg = LESSONS[SL.li].pages[SL.pi], task = pg.task, st = SL.state, piece = st.board[r][c];
+    const task = SL.task, st = SL.state, piece = st.board[r][c];
     const name = sqName(r, c);
     if (task && task.type === 'tapSquare') {
       if (SL.done) return;
@@ -1824,12 +1868,12 @@ const ALL_PUZZLES = [
   }
 
   function sResolve(m, promoChoice) {
-    const pg = LESSONS[SL.li].pages[SL.pi], task = pg.task;
+    const task = SL.task;
     const res = applyMove(SL.state, m, promoChoice || 'Q');
     const ns = res.state, dest = sqName(m.tr, m.tc);
     let ok = false;
     switch (task.type) {
-      case 'moveTo': ok = task.goal.indexOf(dest) !== -1 && (!task.goalPiece || m.piece.toUpperCase() === task.goalPiece); break;
+      case 'moveTo': ok = task.goal.indexOf(dest) !== -1 && (!task.goalPiece || m.piece.toUpperCase() === task.goalPiece) && (!task.goalFrom || sqName(m.fr, m.fc) === task.goalFrom); break;
       case 'mate': ok = gameResult(ns).type === 'checkmate'; break;
       case 'check': ok = gameResult(ns).check; break;
       case 'castle': ok = !!m.castle; break;
@@ -1838,6 +1882,7 @@ const ALL_PUZZLES = [
       default: ok = true;
     }
     SL.sel = null; SL.targets = []; SL.promoPending = null;
+    SL.last = [[m.fr, m.fc], [m.tr, m.tc]];
     if (ok) {
       SL.state = ns;
       if (task.type === 'escape') {
@@ -1845,7 +1890,8 @@ const ALL_PUZZLES = [
         SL.done = true;
         setFb(function () { return t()[key]; }, 'end');
         renderStudy();
-      } else sComplete(task.ok || T('잘했어요! 👏', 'Well done! 👏'));
+      } else if (task.then) sNextStage(task);
+      else sComplete(task.ok || T('잘했어요! 👏', 'Well done! 👏'));
       return;
     }
     SL.state = ns; SL.locked = true;
@@ -1854,14 +1900,33 @@ const ALL_PUZZLES = [
     const tok = studyToken;
     setTimeout(function () {
       if (tok !== studyToken || !SL) return;
-      SL.state = sStateFromPage(pg); SL.locked = false;
+      SL.state = SL.stageState; SL.last = null; SL.locked = false;
       renderStudy();
     }, 1500);
   }
 
+  // Multi-step missions: after a correct move the opponent answers, then the next step starts.
+  function sNextStage(task) {
+    SL.locked = true;
+    setFb(function () { return Lg(task.ok); }, 'end');
+    renderStudy();
+    const tok = studyToken;
+    setTimeout(function () {
+      if (tok !== studyToken || !SL) return;
+      const fr = 8 - Number(task.reply.charAt(1)), fc = task.reply.charCodeAt(0) - 97;
+      const tr = 8 - Number(task.reply.charAt(3)), tc = task.reply.charCodeAt(2) - 97;
+      const mv = legalMoves(SL.state, fr, fc).filter(function (x) { return x.tr === tr && x.tc === tc; })[0];
+      if (mv) { SL.state = applyMove(SL.state, mv, 'Q').state; SL.last = [[fr, fc], [tr, tc]]; }
+      SL.stageState = SL.state;
+      SL.task = task.then;
+      SL.locked = false;
+      renderStudy();
+    }, 1000);
+  }
+
   function renderStudy() {
     if (!SL) return;
-    const s = t(), lesson = LESSONS[SL.li], pg = lesson.pages[SL.pi], task = pg.task, st = SL.state;
+    const s = t(), lesson = curLessons()[SL.li], pg = lesson.pages[SL.pi], task = SL.task, st = SL.state;
     const goals = (task && task.goal && !SL.done) ? task.goal : [];
     sBoardEl.innerHTML = '';
     for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
@@ -1871,11 +1936,12 @@ const ALL_PUZZLES = [
       const piece = st.board[r][c];
       if (piece) {
         const span = document.createElement('span');
-        span.className = 'piece ' + (isWhite(piece) ? 'white-piece' : 'black-piece');
-        span.textContent = PIECE_GLYPHS[piece];
+        span.className = 'piece';
+        span.innerHTML = pieceSvg(piece);
         cell.appendChild(span);
       }
       if (goals.indexOf(sqName(r, c)) !== -1) cell.classList.add('goal');
+      if (SL.last && ((SL.last[0][0] === r && SL.last[0][1] === c) || (SL.last[1][0] === r && SL.last[1][1] === c))) cell.classList.add('last');
       if ((SL.sel && SL.sel[0] === r && SL.sel[1] === c) || (SL.tapSq && SL.tapSq[0] === r && SL.tapSq[1] === c)) cell.classList.add('selected');
       const tm = SL.targets.filter(function (m) { return m.tr === r && m.tc === c; });
       if (tm.length) {
@@ -1897,9 +1963,9 @@ const ALL_PUZZLES = [
     document.getElementById('s-page-count').textContent = s.pageCount(SL.pi, lesson.pages.length);
     const textEl = document.getElementById('s-text'), taskEl = document.getElementById('s-task'), fbEl = document.getElementById('s-feedback');
     const isLast = SL.pi === lesson.pages.length - 1;
-    const hasNextLesson = SL.li + 1 < LESSONS.length;
+    const hasNextLesson = SL.li + 1 < curLessons().length;
     if (SL.finished) {
-      textEl.textContent = s.lessonDoneTitle + ' ' + s.lessonDoneText(Lg(lesson.title)) + (hasNextLesson ? '' : ' ' + s.allDone);
+      textEl.textContent = s.lessonDoneTitle + ' ' + s.lessonDoneText(Lg(lesson.title)) + (hasNextLesson ? '' : ' ' + (currentView === 'tactics' ? s.allDoneTactics : s.allDone));
       taskEl.hidden = true; fbEl.textContent = ''; fbEl.className = 'status-text';
     } else {
       textEl.textContent = Lg(pg.text);
@@ -1928,8 +1994,8 @@ const ALL_PUZZLES = [
       ['Q', 'R', 'B', 'N'].forEach(function (p) {
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'promo-choice on-dark white-piece';
-        btn.textContent = PIECE_GLYPHS[p];
+        btn.className = 'promo-choice on-dark';
+        btn.innerHTML = '<span class=\"piece\">' + pieceSvg(p) + '</span>';
         btn.addEventListener('click', function () { sResolve(SL.promoPending, p); });
         pc.appendChild(btn);
       });
@@ -1937,7 +2003,7 @@ const ALL_PUZZLES = [
   }
 
   function sAdvance() {
-    const lesson = LESSONS[SL.li];
+    const lesson = curLessons()[SL.li];
     if (SL.pi === lesson.pages.length - 1) { markLessonDone(lesson.id); SL.finished = true; renderStudy(); }
     else loadStudyPage(SL.li, SL.pi + 1);
   }
@@ -1990,16 +2056,17 @@ const ALL_PUZZLES = [
     currentView = v;
     menuView.hidden = v !== 'menu';
     quizView.hidden = v !== 'quiz';
-    studyView.hidden = v !== 'study';
+    studyView.hidden = !(v === 'study' || v === 'tactics');
     battleView.hidden = v !== 'battle';
     homeBtn.hidden = v === 'menu';
     applyStaticStrings();
     if (v === 'quiz') fullReset();
     if (v === 'battle') startBattle();
-    if (v === 'study') showStudyList();
+    if (v === 'study' || v === 'tactics') showStudyList();
     window.scrollTo(0, 0);
   }
   document.getElementById('menu-study').addEventListener('click', function () { showView('study'); });
+  document.getElementById('menu-tactics').addEventListener('click', function () { showView('tactics'); });
   document.getElementById('menu-quiz').addEventListener('click', function () { showView('quiz'); });
   document.getElementById('menu-battle').addEventListener('click', function () { showView('battle'); });
   homeBtn.addEventListener('click', function () { showView('menu'); });
