@@ -74,9 +74,11 @@
     padding-top: env(safe-area-inset-top, 0px);
     padding-bottom: env(safe-area-inset-bottom, 0px);
     -webkit-font-smoothing: antialiased;
+    word-break: keep-all;
+    overflow-wrap: break-word;
   }
 
-  .page { max-width: 980px; margin: 0 auto; padding: 40px 20px 64px; }
+  .page { max-width: 1120px; margin: 0 auto; padding: 32px 24px 64px; }
 
   header.top { margin-bottom: 32px; }
 
@@ -93,9 +95,13 @@
     font-weight: 600;
     font-size: clamp(28px, 4.5vw, 40px);
     letter-spacing: -0.01em;
-    margin: 0 0 6px;
+    margin: 0;
     color: var(--text-primary);
   }
+
+  .title-row { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
+  .brand-ico { width: 48px; height: 48px; flex-shrink: 0; border-radius: 14px; background: var(--board-frame); display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 14px -8px rgba(0,0,0,0.5); }
+  .brand-ico svg { width: 82%; height: 82%; display: block; }
 
   header.top p {
     margin: 0;
@@ -131,25 +137,32 @@
   [hidden] { display: none !important; }
 
   .layout, .battle-layout {
+    --board-col: min(720px, max(560px, calc(100vh - 230px)));
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 260px;
+    grid-template-columns: minmax(0, var(--board-col)) 300px;
+    justify-content: start;
     gap: 28px;
     align-items: start;
   }
-  @media (max-width: 760px) {
-    .layout, .battle-layout { grid-template-columns: 1fr; }
+  .battle-layout { --board-col: min(760px, max(560px, calc(100vh - 150px))); }
+  @media (max-width: 900px) {
+    .layout, .battle-layout { grid-template-columns: 1fr; max-width: 680px; margin: 0 auto; gap: 16px; }
+    .layout > .panel, .battle-layout > .panel { display: contents; }
+    .top-card { order: -1; }
+    .battle-layout .b-controls { order: 1; }
+    .battle-layout .cap-card { order: 2; }
+    .battle-layout .moves-card { order: 3; }
+    body[data-compact="1"] header.top p { display: none; }
+    body[data-compact="1"] header.top { margin-bottom: 16px; max-width: 680px; margin-left: auto; margin-right: auto; }
+    .status-text:empty { display: none; }
+  }
+  @media (max-width: 700px) {
     .menu-grid { grid-template-columns: 1fr; }
   }
 
   .board-column { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 
-  .board-meta {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
+  .board-meta { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
 
   .difficulty-badge {
     display: inline-flex;
@@ -166,7 +179,7 @@
   .difficulty-dot.easy { background: var(--accent-good); }
   .difficulty-dot.hard { background: var(--accent-bad); }
 
-  .prompt-text { font-size: 15px; color: var(--text-primary); font-weight: 500; }
+  .prompt-text { font-size: 18px; color: var(--text-primary); font-weight: 600; line-height: 1.5; }
 
   .board-frame {
     position: relative;
@@ -291,9 +304,13 @@
     background: var(--panel);
     color: var(--text-primary);
     cursor: pointer;
-    transition: border-color 0.15s ease, background 0.15s ease;
+    min-height: 40px;
+    transition: border-color 0.15s ease, background 0.15s ease, transform 0.08s ease;
   }
   button:hover { border-color: var(--accent-gold); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  @media (pointer: coarse) { button { min-height: 46px; } .lang-btn { min-height: 40px; } }
+  @media (hover: hover) { .sq:hover { filter: brightness(1.07); } }
   button:focus-visible { outline: 2px solid var(--select-ring); outline-offset: 2px; }
   button.primary { background: var(--accent-gold); border-color: var(--accent-gold); color: #1c1408; }
   button:disabled { opacity: 0.45; cursor: not-allowed; }
@@ -306,7 +323,9 @@
   .done-card h2 { font-family: var(--serif); font-size: 26px; margin: 0 0 8px; }
   .done-card p { color: var(--text-muted); font-size: 14.5px; margin: 0 0 18px; }
 
-  .menu-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; max-width: 980px; }
+  .menu-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; max-width: 840px; }
+  @media (min-width: 701px) and (max-width: 1079px) { .menu-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: none; } }
+  @media (min-width: 1080px) { .menu-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); max-width: none; } .menu-card { padding: 26px 20px; } .menu-title { font-size: 25px; } }
   .menu-card {
     display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
     text-align: left; padding: 30px 28px; border-radius: 16px;
@@ -315,7 +334,10 @@
   }
   .menu-card:hover { border-color: var(--accent-gold); transform: translateY(-2px); }
   @media (prefers-reduced-motion: reduce) { .menu-card:hover { transform: none; } }
-  .menu-icon { font-size: 44px; line-height: 1; }
+  .menu-icon { font-size: 44px; line-height: 1; flex-shrink: 0; }
+  .menu-text { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .menu-meta { align-self: flex-start; font-size: 12.5px; font-weight: 600; color: var(--accent-good); background: rgba(79,122,84,0.12); border-radius: 999px; padding: 2px 10px; }
+  .menu-meta:empty { display: none; }
   .menu-title { font-family: var(--serif); font-size: 28px; font-weight: 600; color: var(--text-primary); }
   .menu-desc { font-size: 14.5px; color: var(--text-muted); line-height: 1.55; font-weight: 400; }
 
@@ -354,7 +376,7 @@
     justify-content: center; align-items: center; gap: 20px;
     min-height: calc(100vh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   }
-  body.bfull .board-frame { padding: 14px; width: min(calc(100vh - 24px), calc(100vw - 372px)); }
+  body.bfull .board-frame { padding: 14px; max-width: none; width: min(calc(100vh - 24px), calc(100vw - 372px)); }
   body.bfull .panel { gap: 10px; max-height: calc(100vh - 24px); overflow-y: auto; }
   body.bfull .panel-card { padding: 12px 16px; }
   body.bfull .moves-box { max-height: 110px; }
@@ -364,7 +386,7 @@
     body.bfull .panel { max-height: calc(100dvh - 24px); }
   }
   @media (orientation: portrait) {
-    body.bfull .battle-layout { grid-template-columns: 1fr; justify-items: stretch; align-items: start; min-height: 0; }
+    body.bfull .battle-layout { grid-template-columns: 1fr; justify-items: stretch; align-items: start; min-height: 0; max-width: none; }
     body.bfull .board-column { align-items: center; }
     body.bfull .board-frame { width: 100%; max-width: calc(100vh - 24px); }
     body.bfull .panel { max-height: none; width: min(100%, 560px); margin: 0 auto; }
@@ -387,6 +409,37 @@
   .page-count { font-size: 12.5px; color: var(--text-muted); margin-bottom: 8px; }
   .sq.goal { box-shadow: inset 0 0 0 3px rgba(232,176,74,0.95); }
   .sq.goal::before { content: '⭐'; position: absolute; top: 2px; right: 4px; font-size: clamp(12px, 2.2vw, 20px); line-height: 1; }
+
+  .sq.from-hint { box-shadow: inset 0 0 0 3px rgba(79,150,100,0.95); }
+  .move-log { margin-top: 12px; font-size: 13.5px; line-height: 1.7; color: var(--text-muted); background: rgba(0,0,0,0.045); border-radius: 8px; padding: 8px 10px; overflow-wrap: anywhere; word-break: normal; }
+  .list-progress { display: flex; align-items: center; gap: 12px; max-width: 980px; margin: 0 0 16px; font-size: 14px; color: var(--text-muted); }
+  .list-progress .bar { flex: 1; max-width: 320px; height: 8px; border-radius: 999px; background: var(--panel-border); overflow: hidden; }
+  .list-progress .bar span { display: block; height: 100%; background: var(--accent-gold); border-radius: 999px; transition: width 0.3s ease; }
+  .lesson-card { transition: border-color 0.15s ease, transform 0.15s ease; }
+  .lesson-card:hover { border-color: var(--accent-gold); transform: translateY(-2px); }
+  @media (prefers-reduced-motion: reduce) { .lesson-card:hover { transform: none; } }
+  .lesson-card .ico svg { width: 38px; height: 38px; display: block; }
+  .lesson-card .ico { min-height: 38px; display: flex; align-items: center; }
+
+  @media (max-width: 700px) {
+    .menu-card { flex-direction: row; align-items: center; gap: 16px; padding: 18px 20px; }
+    .menu-icon { font-size: 38px; width: 46px; text-align: center; }
+    .menu-title { font-size: 22px; }
+    .menu-desc { font-size: 13.5px; }
+  }
+  @media (max-width: 560px) {
+    .page { padding: 20px 14px 48px; }
+    header.top { margin-bottom: 20px; }
+    header.top h1 { font-size: 24px; }
+    .brand-ico { width: 38px; height: 38px; border-radius: 11px; }
+    .board-frame { padding: 12px; border-radius: 12px; }
+    .board-inner { gap: 4px; }
+    .board-main { gap: 4px; }
+    .rank-labels span, .file-labels span { width: 12px; font-size: 11px; }
+    .prompt-text { font-size: 16.5px; }
+    .lesson-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .lesson-card { padding: 14px 14px; }
+  }
 </style>
 </head>
 <body>
@@ -394,7 +447,7 @@
   <header class="top">
     <div class="top-row">
       <div>
-        <h1 id="title-text">체스 묘수풀이</h1>
+        <div class="title-row"><span class="brand-ico" id="brand-ico"></span><h1 id="title-text">체스 묘수풀이</h1></div>
         <p id="subtitle-text"></p>
       </div>
       <div class="lang-toggle">
@@ -409,23 +462,41 @@
     <div class="menu-grid">
       <button id="menu-study" class="menu-card" type="button">
         <span class="menu-icon">📚</span>
-        <span class="menu-title" id="menu-study-title"></span>
-        <span class="menu-desc" id="menu-study-desc"></span>
+        <span class="menu-text">
+          <span class="menu-title" id="menu-study-title"></span>
+          <span class="menu-desc" id="menu-study-desc"></span>
+          <span class="menu-meta" id="menu-study-meta"></span>
+        </span>
       </button>
       <button id="menu-tactics" class="menu-card" type="button">
         <span class="menu-icon">⚡</span>
-        <span class="menu-title" id="menu-tactics-title"></span>
-        <span class="menu-desc" id="menu-tactics-desc"></span>
+        <span class="menu-text">
+          <span class="menu-title" id="menu-tactics-title"></span>
+          <span class="menu-desc" id="menu-tactics-desc"></span>
+          <span class="menu-meta" id="menu-tactics-meta"></span>
+        </span>
+      </button>
+      <button id="menu-openings" class="menu-card" type="button">
+        <span class="menu-icon">🚀</span>
+        <span class="menu-text">
+          <span class="menu-title" id="menu-openings-title"></span>
+          <span class="menu-desc" id="menu-openings-desc"></span>
+          <span class="menu-meta" id="menu-openings-meta"></span>
+        </span>
       </button>
       <button id="menu-quiz" class="menu-card" type="button">
         <span class="menu-icon">🧩</span>
-        <span class="menu-title" id="menu-quiz-title"></span>
-        <span class="menu-desc" id="menu-quiz-desc"></span>
+        <span class="menu-text">
+          <span class="menu-title" id="menu-quiz-title"></span>
+          <span class="menu-desc" id="menu-quiz-desc"></span>
+        </span>
       </button>
       <button id="menu-battle" class="menu-card" type="button">
         <span class="menu-icon">⚔️</span>
-        <span class="menu-title" id="menu-battle-title"></span>
-        <span class="menu-desc" id="menu-battle-desc"></span>
+        <span class="menu-text">
+          <span class="menu-title" id="menu-battle-title"></span>
+          <span class="menu-desc" id="menu-battle-desc"></span>
+        </span>
       </button>
     </div>
   </div>
@@ -452,7 +523,7 @@
     </div>
 
     <aside class="panel">
-      <div class="panel-card">
+      <div class="panel-card top-card">
         <div class="score-label" id="score-label-text"></div>
         <div class="score-value" id="score">0</div>
         <div class="progress-row">
@@ -481,7 +552,10 @@
   </div>
 
   <div id="view-study" hidden>
-    <div id="study-list"><div class="lesson-grid" id="lesson-grid"></div></div>
+    <div id="study-list">
+      <div class="list-progress"><span class="bar"><span id="list-bar"></span></span><span id="list-count"></span></div>
+      <div class="lesson-grid" id="lesson-grid"></div>
+    </div>
     <div id="study-lesson" hidden>
       <div class="battle-layout">
         <div class="board-column">
@@ -500,11 +574,12 @@
           </div>
         </div>
         <aside class="panel">
-          <div class="panel-card">
+          <div class="panel-card top-card">
             <div class="score-label" id="s-lesson-title"></div>
             <div class="page-count" id="s-page-count"></div>
             <div class="lesson-text" id="s-text"></div>
             <div class="task-box" id="s-task" hidden></div>
+            <div class="move-log" id="s-log" hidden></div>
             <div class="status-text" id="s-feedback" aria-live="polite"></div>
           </div>
           <div class="panel-card controls">
@@ -537,22 +612,22 @@
         </div>
       </div>
       <aside class="panel">
-        <div class="panel-card">
+        <div class="panel-card top-card">
           <div class="turn-row"><span class="turn-dot w" id="b-turn-dot"></span><span id="b-turn-text"></span></div>
           <div class="status-text" id="b-status" aria-live="polite"></div>
         </div>
-        <div class="panel-card">
+        <div class="panel-card cap-card">
           <div class="score-label" id="b-captured-title"></div>
           <div class="cap-label" id="b-cap-w-label"></div>
           <div class="captured-row" id="b-cap-w"></div>
           <div class="cap-label" id="b-cap-b-label"></div>
           <div class="captured-row" id="b-cap-b"></div>
         </div>
-        <div class="panel-card">
+        <div class="panel-card moves-card">
           <div class="score-label" id="b-moves-title"></div>
           <div class="moves-box" id="b-moves"></div>
         </div>
-        <div class="panel-card controls">
+        <div class="panel-card controls b-controls">
           <button id="b-full" class="primary" type="button"></button>
           <button id="b-new" type="button"></button>
           <button id="b-undo" type="button"></button>
@@ -723,6 +798,13 @@ const ALL_PUZZLES = [
       menuTacticsTitle: '기술', menuTacticsDesc: '포크, 핀, 유인 같은 멋진 체스 기술을 직접 해보면서 배워요.',
       tacticsTitle: '체스 기술', tacticsSubtitle: '포크, 핀, 스큐어, 유인... 상대를 이기는 기술을 하나씩 익혀봐요!',
       allDoneTactics: '기술 레슨을 모두 마쳤어요! 이제 퀴즈와 대결에서 써먹어 볼까요? 🏆',
+      menuOpeningsTitle: '오프닝', menuOpeningsDesc: '유명한 오프닝을 직접 두면서 외워요. 처음 10수를 멋지게 시작해봐요!',
+      openingsTitle: '체스 오프닝', openingsSubtitle: '유명한 오프닝을 순서대로 직접 두면서 외워봐요. 왜 그렇게 두는지도 알려줄게요!',
+      allDoneOpenings: '오프닝 레슨을 모두 마쳤어요! 이제 대결에서 직접 써볼까요? 🏆',
+      logTitle: '지금까지 둔 수',
+      openMove: function (piece, from, to, castle) { return piece + ' ' + from + ' → ⭐ ' + to + (castle ? ' (캐슬링)' : ''); },
+      menuProgress: function (n, t) { return n + ' / ' + t + ' 완료'; },
+      listProgress: function (n, t) { return t + '개 중 ' + n + '개 레슨을 마쳤어요'; },
       newGame: '새 게임', undo: '한 수 무르기', flip: '보드 뒤집기',
       movesTitle: '기보', capturedTitle: '잡은 기물',
       capByWhite: '백이 잡음', capByBlack: '흑이 잡음',
@@ -800,6 +882,13 @@ const ALL_PUZZLES = [
       menuTacticsTitle: 'Tactics', menuTacticsDesc: 'Learn cool tricks like forks, pins and decoys by trying them yourself.',
       tacticsTitle: 'Chess Tactics', tacticsSubtitle: 'Forks, pins, skewers, decoys... learn the tricks that win games, one by one!',
       allDoneTactics: 'You finished every tactics lesson! Try them out in the Quiz and the Battle! 🏆',
+      menuOpeningsTitle: 'Openings', menuOpeningsDesc: 'Play famous openings yourself and remember them. Start your games with a great first 10 moves!',
+      openingsTitle: 'Chess Openings', openingsSubtitle: 'Play famous openings move by move and remember them. We will tell you why each move is played!',
+      allDoneOpenings: 'You finished every opening lesson! Ready to use them in the Battle? 🏆',
+      logTitle: 'Moves so far',
+      openMove: function (piece, from, to, castle) { return piece + ' ' + from + ' → ⭐ ' + to + (castle ? ' (castling)' : ''); },
+      menuProgress: function (n, t) { return n + ' / ' + t + ' done'; },
+      listProgress: function (n, t) { return n + ' of ' + t + ' lessons completed'; },
       newGame: 'New game', undo: 'Undo move', flip: 'Flip board',
       movesTitle: 'Moves', capturedTitle: 'Captured pieces',
       capByWhite: 'Captured by White', capByBlack: 'Captured by Black',
@@ -1012,9 +1101,12 @@ const ALL_PUZZLES = [
     if (currentView === 'menu') { titleEl.textContent = s.menuTitle; subtitleEl.textContent = s.menuSubtitle; }
     else if (currentView === 'study') { titleEl.textContent = s.studyTitle; subtitleEl.textContent = s.studySubtitle; }
     else if (currentView === 'tactics') { titleEl.textContent = s.tacticsTitle; subtitleEl.textContent = s.tacticsSubtitle; }
+    else if (currentView === 'openings') { titleEl.textContent = s.openingsTitle; subtitleEl.textContent = s.openingsSubtitle; }
     else if (currentView === 'battle') { titleEl.textContent = s.battleTitle; subtitleEl.textContent = s.battleSubtitle; }
     else { titleEl.textContent = s.title; subtitleEl.textContent = s.subtitle; }
     homeBtn.textContent = s.home;
+    document.getElementById('menu-openings-title').textContent = s.menuOpeningsTitle;
+    document.getElementById('menu-openings-desc').textContent = s.menuOpeningsDesc;
     document.getElementById('menu-tactics-title').textContent = s.menuTacticsTitle;
     document.getElementById('menu-tactics-desc').textContent = s.menuTacticsDesc;
     document.getElementById('menu-study-title').textContent = s.menuStudyTitle;
@@ -1024,6 +1116,13 @@ const ALL_PUZZLES = [
     document.getElementById('menu-battle-title').textContent = s.menuBattleTitle;
     document.getElementById('menu-battle-desc').textContent = s.menuBattleDesc;
     updateFullBtn();
+    ['study', 'tactics', 'openings'].forEach(function (k) {
+      const lessons = k === 'study' ? LESSONS : (k === 'tactics' ? TACTICS : OPENINGS);
+      let n = 0;
+      try { n = JSON.parse(localStorage.getItem('chess-' + k + '-done') || '[]').length; } catch (e) {}
+      const el = document.getElementById('menu-' + k + '-meta');
+      el.textContent = n > 0 ? s.menuProgress(Math.min(n, lessons.length), lessons.length) : '';
+    });
     document.getElementById('b-new').textContent = s.newGame;
     document.getElementById('b-undo').textContent = s.undo;
     document.getElementById('b-flip').textContent = s.flip;
@@ -1059,7 +1158,7 @@ const ALL_PUZZLES = [
     applyStaticStrings();
     if (currentView === 'quiz') applyPuzzleStrings();
     if (currentView === 'battle') renderBattle();
-    if (currentView === 'study' || currentView === 'tactics') renderStudyAll();
+    if (currentView === 'study' || currentView === 'tactics' || currentView === 'openings') renderStudyAll();
   }
 
   function loadPuzzle() {
@@ -1406,6 +1505,36 @@ const ALL_PUZZLES = [
     if (s.half >= 100) return { type: 'fifty', check: check };
     return { type: 'playing', check: check };
   }
+  function sanOf(st, m, ns, captured) {
+    let txt;
+    if (m.castle) txt = m.castle === 'K' ? 'O-O' : 'O-O-O';
+    else {
+      const t = m.piece.toUpperCase();
+      txt = '';
+      if (t !== 'P') {
+        txt = t;
+        let amb = false, sameFile = false, sameRank = false;
+        for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
+          if (r === m.fr && c === m.fc) continue;
+          if (st.board[r][c] !== m.piece) continue;
+          if (legalMoves(st, r, c).some(function (x) { return x.tr === m.tr && x.tc === m.tc; })) {
+            amb = true;
+            if (c === m.fc) sameFile = true;
+            if (r === m.fr) sameRank = true;
+          }
+        }
+        if (amb) {
+          if (!sameFile) txt += 'abcdefgh'.charAt(m.fc);
+          else if (!sameRank) txt += String(8 - m.fr);
+          else txt += 'abcdefgh'.charAt(m.fc) + String(8 - m.fr);
+        }
+      } else if (captured) txt = 'abcdefgh'.charAt(m.fc);
+      txt += (captured ? 'x' : '') + 'abcdefgh'.charAt(m.tc) + String(8 - m.tr);
+      if (m.promo) txt += '=Q';
+    }
+    const gr = gameResult(ns);
+    return txt + (gr.type === 'checkmate' ? '#' : (gr.check ? '+' : ''));
+  }
   // ENGINE-END
 
   const START_BOARD = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR';
@@ -1595,7 +1724,7 @@ const ALL_PUZZLES = [
     const cs = pg.castle || '';
     return {
       board: parseFEN(pg.fen), turn: 'w',
-      castle: { K: cs.indexOf('K') !== -1, Q: cs.indexOf('Q') !== -1, k: false, q: false },
+      castle: { K: cs.indexOf('K') !== -1, Q: cs.indexOf('Q') !== -1, k: cs.indexOf('k') !== -1, q: cs.indexOf('q') !== -1 },
       ep: pg.ep ? [8 - Number(pg.ep.charAt(1)), pg.ep.charCodeAt(0) - 97] : null, half: 0
     };
   }
@@ -1767,9 +1896,13 @@ const ALL_PUZZLES = [
   const TACTICS = [{"id":"fork","icon":"🍴","title":{"ko":"포크 (두 개를 한꺼번에!)","en":"The Fork"},"pages":[{"fen":"6k1/5ppp/2q5/3N4/8/8/8/6K1 w - - 0 1","text":{"ko":"\"포크\"는 한 기물로 상대 기물 두 개를 동시에 공격하는 기술이에요. 상대는 한 번에 하나만 구할 수 있으니, 나머지 하나를 잡을 수 있어요! 나이트는 포크를 가장 잘 만드는 기물이에요.","en":"A \"fork\" is when one piece attacks two enemy pieces at the same time. Your opponent can only save one, so you win the other! Knights are the best forkers."},"task":{"type":"moveTo","goal":["e7"],"goalPiece":"N","reply":"g8h8","label":{"ko":"나이트로 킹과 퀸을 동시에 공격할 수 있는 칸(⭐)으로 점프해보세요.","en":"Jump the knight to the ⭐ square to attack the king and the queen at once."},"ok":{"ko":"포크 성공! 킹이 체크를 받아서 피했어요. 이제 퀸을 잡을 차례예요!","en":"Fork! The king had to run away. Now take the queen!"},"wrong":{"ko":"그 수로는 두 기물을 동시에 공격하지 못해요. ⭐ 칸을 찾아보세요!","en":"That does not attack two pieces at once. Look for the ⭐ square!"},"then":{"type":"moveTo","goal":["c6"],"label":{"ko":"이제 나이트로 퀸을 잡아보세요!","en":"Now capture the queen with your knight!"},"ok":{"ko":"퀸을 얻었어요! 포크 덕분에 큰 이득을 봤어요 🎉","en":"You won the queen! The fork paid off 🎉"},"wrong":{"ko":"퀸을 잡아야 해요! ⭐ 를 찾아보세요.","en":"Take the queen! Look for the ⭐."}}}},{"fen":"6k1/8/1r1r4/8/2P5/8/8/6K1 w - - 0 1","text":{"ko":"폰도 포크를 할 수 있어요! 폰이 앞으로 나아가서 대각선 앞의 기물 두 개를 동시에 노릴 수 있어요.","en":"Pawns can fork too! A pawn can step forward and attack two pieces diagonally in front."},"task":{"type":"moveTo","goal":["c5"],"reply":"b6b3","label":{"ko":"폰을 한 칸 앞으로 보내 두 룩을 동시에 노려보세요.","en":"Push the pawn one square to attack both rooks."},"ok":{"ko":"폰 포크! 상대가 한 룩을 피했어요. 남은 룩을 잡아요!","en":"Pawn fork! One rook ran away. Take the other one!"},"wrong":{"ko":"폰을 ⭐ 칸으로 한 칸 전진시켜 보세요.","en":"Push the pawn one step to the ⭐ square."},"then":{"type":"moveTo","goal":["d6"],"label":{"ko":"폰으로 남은 룩을 잡아보세요!","en":"Capture the other rook with your pawn!"},"ok":{"ko":"룩을 얻었어요! 폰 하나로 룩을 이겼어요 🎉","en":"You won a rook with just a pawn! 🎉"},"wrong":{"ko":"폰은 대각선으로 잡아요. ⭐ 를 찾아보세요.","en":"Pawns capture diagonally. Look for the ⭐."}}}},{"fen":"r5k1/6pp/8/8/8/8/5PPP/3Q2K1 w - - 0 1","text":{"ko":"퀸도 멋진 포크를 만들어요. 특히 \"체크\"를 하면서 동시에 다른 기물도 공격하면, 상대는 무조건 킹을 먼저 지켜야 해요!","en":"The queen can fork too. If she gives check while also attacking another piece, your opponent must save the king first!"},"task":{"type":"moveTo","goal":["d5"],"goalPiece":"Q","reply":"g8h8","label":{"ko":"퀸으로 체크를 하면서 룩도 노릴 수 있는 칸(⭐)으로 가보세요.","en":"Move the queen to the ⭐ square: check the king and attack the rook!"},"ok":{"ko":"체크 포크! 킹이 피했어요. 룩을 잡을 수 있어요!","en":"Check and fork! The king moved. Now grab the rook!"},"wrong":{"ko":"체크를 하면서 룩도 노리는 칸을 찾아보세요. 대각선을 살펴봐요!","en":"Find the square that checks the king and hits the rook. Look at the diagonal!"},"then":{"type":"moveTo","goal":["a8"],"label":{"ko":"퀸으로 룩을 잡아보세요!","en":"Capture the rook with your queen!"},"ok":{"ko":"룩을 얻었어요! 🎉","en":"You won the rook! 🎉"},"wrong":{"ko":"⭐ 의 룩을 잡아보세요.","en":"Capture the rook on the ⭐."}}}}]},{"id":"pin","icon":"📌","title":{"ko":"핀 (꼼짝 못 하게!)","en":"The Pin"},"pages":[{"fen":"4k3/3n4/8/8/2B5/8/8/6K1 w - - 0 1","text":{"ko":"\"핀\"은 상대 기물을 못 움직이게 묶어두는 기술이에요. 뒤에 킹이 있으면 그 기물은 움직일 수 없어요. 움직이면 킹이 공격받게 되니까요!","en":"A \"pin\" ties an enemy piece down. If the king is right behind it, that piece cannot move at all, because the king would be attacked!"},"task":{"type":"moveTo","goal":["b5"],"goalPiece":"B","label":{"ko":"비숍으로 나이트를 킹 앞에 꼼짝 못 하게 핀해보세요.","en":"Pin the knight to the king with your bishop."},"ok":{"ko":"핀 성공! 나이트는 움직일 수 없어요. 움직이면 킹이 잡혀요!","en":"Pinned! The knight cannot move or the king would be in danger!"},"wrong":{"ko":"비숍을 나이트와 킹이 한 줄에 놓이는 칸으로 보내보세요. ⭐ 를 찾아봐요.","en":"Put the bishop on the same diagonal as the knight and king. Find the ⭐!"}}},{"fen":"3q2k1/5ppp/5n2/8/8/8/8/2B3K1 w - - 0 1","text":{"ko":"킹이 아니라 \"퀸\" 같은 중요한 기물 앞에 핀을 만들 수도 있어요. 이 경우 나이트가 움직일 수는 있지만, 움직이면 퀸을 잃어요!","en":"You can pin a piece in front of something valuable, like a queen. The knight CAN move, but then you take the queen!"},"task":{"type":"moveTo","goal":["g5"],"goalPiece":"B","reply":"f6e4","label":{"ko":"비숍을 ⭐ 칸으로 보내 나이트를 퀸 앞에 핀해보세요.","en":"Move the bishop to the ⭐ square to pin the knight to the queen."},"ok":{"ko":"핀 성공! 그런데 상대가 핀된 나이트를 움직여 버렸어요!","en":"Pinned! But your opponent moved the pinned knight anyway!"},"wrong":{"ko":"나이트와 퀸이 한 대각선에 놓이는 칸을 찾아보세요.","en":"Find the square that lines up the knight and the queen on a diagonal."},"then":{"type":"moveTo","goal":["d8"],"label":{"ko":"비숍으로 퀸을 잡아보세요!","en":"Capture the queen with your bishop!"},"ok":{"ko":"퀸을 얻었어요! 핀을 무시하면 이렇게 돼요 🎉","en":"You won the queen! This is what happens when you ignore a pin 🎉"},"wrong":{"ko":"⭐ 의 퀸을 잡아보세요.","en":"Capture the queen on the ⭐."}}}},{"fen":"4k3/8/8/4n3/3P4/8/8/4R1K1 w - - 0 1","text":{"ko":"핀된 기물은 도망갈 수 없어서 공격하기 좋은 목표예요. 폰처럼 약한 기물로도 잡을 수 있어요!","en":"A pinned piece cannot run away, so it is a great target. Even a weak pawn can capture it!"},"task":{"type":"moveTo","goal":["e5"],"label":{"ko":"핀된 나이트를 잡아보세요!","en":"Capture the pinned knight!"},"ok":{"ko":"나이트를 잡았어요! 핀된 기물은 도망칠 수 없죠.","en":"Knight captured! A pinned piece cannot escape."},"wrong":{"ko":"룩에 핀된 나이트(⭐)를 잡아보세요.","en":"Capture the knight (⭐) that is pinned by the rook."}}}]},{"id":"skewer","icon":"🍢","title":{"ko":"스큐어 (꼬치 꿰기)","en":"The Skewer"},"pages":[{"fen":"7r/8/8/7k/8/8/6K1/R7 w - - 0 1","text":{"ko":"\"스큐어\"는 핀과 반대예요. 중요한 기물을 먼저 공격해서 비키게 만들고, 그 뒤에 숨은 기물을 잡는 기술이에요. 꼬치처럼 꿰는 거예요!","en":"A \"skewer\" is the opposite of a pin. You attack a valuable piece so it must move, then you capture the piece hiding behind it. Like a kebab!"},"task":{"type":"moveTo","goal":["h1"],"goalPiece":"R","reply":"h5g5","label":{"ko":"룩으로 킹에게 체크를 걸어요. 킹 뒤에 숨은 룩이 보이나요? (⭐)","en":"Check the king with your rook. Can you see the rook hiding behind it? (⭐)"},"ok":{"ko":"스큐어 성공! 킹이 피하면 뒤의 룩이 무방비예요.","en":"Skewer! When the king moves, the rook behind is defenseless."},"wrong":{"ko":"킹과 뒤의 룩이 한 줄(h줄)에 있어요. 그 줄 끝에서 체크해보세요.","en":"The king and the rook stand on the same file (h). Check from the other end of that file."},"then":{"type":"moveTo","goal":["h8"],"label":{"ko":"룩으로 뒤에 있던 룩을 잡아보세요!","en":"Capture the rook that was hiding behind!"},"ok":{"ko":"룩을 얻었어요! 스큐어 대성공 🎉","en":"You won the rook! Great skewer 🎉"},"wrong":{"ko":"⭐ 의 룩을 잡아보세요.","en":"Capture the rook on the ⭐."}}}},{"fen":"5r2/8/3k4/8/8/8/8/2B3K1 w - - 0 1","text":{"ko":"비숍도 스큐어를 할 수 있어요. 대각선에 킹과 룩이 나란히 있을 때를 찾아봐요.","en":"Bishops can skewer too. Look for a king and a rook lined up on a diagonal."},"task":{"type":"moveTo","goal":["a3"],"goalPiece":"B","reply":"d6d5","label":{"ko":"비숍을 ⭐ 칸으로 보내 킹에게 체크를 걸고 뒤의 룩을 노려보세요.","en":"Send the bishop to the ⭐ square: check the king and hit the rook behind it."},"ok":{"ko":"스큐어! 킹이 피했어요. 룩을 잡을 수 있어요!","en":"Skewer! The king moved away. Take the rook!"},"wrong":{"ko":"킹과 룩이 있는 대각선에 비숍을 올려보세요.","en":"Put the bishop on the diagonal with the king and rook."},"then":{"type":"moveTo","goal":["f8"],"label":{"ko":"비숍으로 룩을 잡아보세요!","en":"Capture the rook with your bishop!"},"ok":{"ko":"룩을 얻었어요! 🎉","en":"You won the rook! 🎉"},"wrong":{"ko":"⭐ 의 룩을 잡아보세요.","en":"Capture the rook on the ⭐."}}}}]},{"id":"discover","icon":"🎭","title":{"ko":"디스커버드 어택 (숨은 공격)","en":"Discovered Attack"},"pages":[{"fen":"4k3/1q6/8/8/4B3/8/8/4R1K1 w - - 0 1","text":{"ko":"\"디스커버드 어택\"은 앞에 있는 기물을 비켜서 뒤에 숨어 있던 기물이 공격하게 만드는 기술이에요. 지금 비숍이 룩 앞을 막고 있어요. 비숍이 움직이면 룩이 킹을 공격해요!","en":"A \"discovered attack\" happens when you move a piece out of the way and let the piece behind it attack. Your bishop is blocking the rook. When it moves, the rook attacks the king!"},"task":{"type":"moveTo","goal":["b7"],"goalPiece":"B","label":{"ko":"비숍으로 퀸을 잡아서 룩의 체크도 함께 만들어보세요!","en":"Capture the queen with the bishop and reveal the rook's check at the same time!"},"ok":{"ko":"디스커버드 체크! 킹이 체크를 받아서 퀸을 지킬 수가 없어요. 퀸을 공짜로 얻었어요! 🎉","en":"Discovered check! The king is in check, so the queen could not be saved. You won her for free! 🎉"},"wrong":{"ko":"비숍이 비켜서면서 퀸도 잡을 수 있는 칸을 찾아보세요.","en":"Find the square where the bishop captures the queen as it moves out of the way."}}},{"fen":"3q4/5pk1/8/8/3N4/8/8/3R2K1 w - - 0 1","text":{"ko":"이번엔 나이트가 룩 앞에 있어요. 나이트가 체크를 하면서 비키면, 상대는 체크를 먼저 피해야 해서 룩이 퀸을 공격하는 걸 막을 수 없어요!","en":"Now the knight is in front of the rook. If the knight moves with check, your opponent has to answer the check first and cannot stop the rook from hitting the queen!"},"task":{"type":"moveTo","goal":["f5","e6"],"goalPiece":"N","reply":"g7g8","label":{"ko":"나이트로 킹에게 체크를 걸면서 룩의 길을 열어주세요.","en":"Give check with the knight while opening the rook's path."},"ok":{"ko":"디스커버드 어택 성공! 킹이 체크를 피했고, 이제 룩이 퀸을 노려요!","en":"Discovered attack! The king stepped away, and now the rook hits the queen!"},"wrong":{"ko":"나이트가 킹에게 체크를 걸 수 있는 칸을 찾아보세요. (⭐)","en":"Find the square where the knight checks the king. (⭐)"},"then":{"type":"moveTo","goal":["d8"],"label":{"ko":"룩으로 퀸을 잡아보세요!","en":"Capture the queen with your rook!"},"ok":{"ko":"퀸을 얻었어요! 숨은 공격이 대성공이에요 🎉","en":"You won the queen! The hidden attack worked 🎉"},"wrong":{"ko":"⭐ 의 퀸을 잡아보세요.","en":"Capture the queen on the ⭐."}}}}]},{"id":"decoy","icon":"🎣","title":{"ko":"유인 (미끼를 던져요)","en":"The Decoy"},"pages":[{"fen":"5r1k/6pp/7N/8/8/8/Q7/6K1 w - - 0 1","text":{"ko":"\"유인\"은 일부러 기물을 내주어서 상대 기물을 내가 원하는 칸으로 끌어당기는 기술이에요. 미끼를 물면 더 큰 이득이 와요! 여기서는 퀸을 미끼로 주면, 검은 룩이 잡을 수밖에 없고 그러면 나이트 한 방에 킹이 잡혀요 (스머더드 메이트).","en":"A \"decoy\" is when you give up a piece on purpose to pull an enemy piece to the square you want. If they bite, you win much more! Here the queen is the bait: the black rook must take her, and then one knight move traps the king (a \"smothered mate\")."},"task":{"type":"moveTo","goal":["g8"],"goalFrom":"a2","reply":"f8g8","label":{"ko":"퀸을 ⭐ 칸으로 보내 체크! 일부러 내주는 수예요.","en":"Send the queen to the ⭐ square with check. This is a sacrifice on purpose!"},"ok":{"ko":"미끼 성공! 킹은 나이트가 지키는 칸의 퀸을 잡을 수 없어서 룩이 잡을 수밖에 없었어요.","en":"The bait worked! The king cannot take the queen (the knight guards that square), so the rook had to."},"wrong":{"ko":"그 수는 아니에요. ⭐ 칸을 찾아보세요! (미끼를 던질 칸이에요)","en":"Not that one. Find the ⭐ square! (That is where the bait goes.)"},"then":{"type":"mate","label":{"ko":"마지막 한 수예요! 체크메이트가 되는 수를 찾아보세요.","en":"One last move! Find the move that gives checkmate."},"ok":{"ko":"스머더드 메이트! 킹이 자기 기물들에 갇혔어요 🎉","en":"Smothered mate! The king is trapped by its own pieces 🎉"},"wrong":{"ko":"나이트로 체크메이트를 만들어보세요!","en":"Deliver checkmate with the knight!"}}}},{"fen":"k3n3/pp1N4/8/8/8/8/Q2R3K/8 w - - 0 1","text":{"ko":"이번엔 킹을 미끼로 유인해요. 퀸을 a7에 내주면 킹이 잡으러 올 수밖에 없어요. 그러면 킹이 a7 칸에 서게 되죠!","en":"This time we lure the king. If you give your queen on a7, the king has to take it, and that puts the king on a7!"},"task":{"type":"moveTo","goal":["a7"],"goalFrom":"a2","reply":"a8a7","label":{"ko":"퀸으로 ⭐ 의 폰을 잡으면서 체크해보세요. (퀸을 내주는 수예요)","en":"Capture the pawn on the ⭐ square with check. (You are giving up the queen!)"},"ok":{"ko":"킹이 퀸을 잡고 a7 칸으로 끌려왔어요! 이제 마무리예요.","en":"The king took the queen and was pulled to a7! Time to finish."},"wrong":{"ko":"그 수는 아니에요. ⭐ 칸을 찾아보세요! (미끼를 던질 칸이에요)","en":"Not that one. Find the ⭐ square! (That is where the bait goes.)"},"then":{"type":"mate","label":{"ko":"마지막 한 수예요! 체크메이트가 되는 수를 찾아보세요.","en":"One last move! Find the move that gives checkmate."},"ok":{"ko":"체크메이트! 킹을 끌어내서 이겼어요 🎉","en":"Checkmate! Luring the king won the game 🎉"},"wrong":{"ko":"룩으로 체크메이트를 만들어보세요! 킹이 갈 곳을 막아봐요.","en":"Checkmate with the rook! Take away the king's squares."}}}},{"fen":"k7/pp1Nn3/8/8/8/3R4/K7/6Q1 w - - 0 1","text":{"ko":"같은 아이디어를 한 번 더 연습해요. 멀리 있는 퀸이 a7로 날아가서 킹을 끌어내요.","en":"Let us practice the same idea once more. The far-away queen flies to a7 to pull out the king."},"task":{"type":"moveTo","goal":["a7"],"goalFrom":"g1","reply":"a8a7","label":{"ko":"퀸으로 ⭐ 의 폰을 잡아 킹을 유인해보세요.","en":"Capture the pawn on the ⭐ square with your queen to lure the king."},"ok":{"ko":"킹이 미끼를 물었어요!","en":"The king took the bait!"},"wrong":{"ko":"그 수는 아니에요. ⭐ 칸을 찾아보세요! (미끼를 던질 칸이에요)","en":"Not that one. Find the ⭐ square! (That is where the bait goes.)"},"then":{"type":"mate","label":{"ko":"마지막 한 수예요! 체크메이트가 되는 수를 찾아보세요.","en":"One last move! Find the move that gives checkmate."},"ok":{"ko":"체크메이트! 🎉","en":"Checkmate! 🎉"},"wrong":{"ko":"룩으로 체크메이트를 만들어보세요!","en":"Deliver checkmate with the rook!"}}}}]},{"id":"deflect","icon":"🧲","title":{"ko":"수비수 끌어내기","en":"Deflection"},"pages":[{"fen":"1r5k/6pp/3R4/3Q4/8/2R5/7K/8 w - - 0 1","text":{"ko":"상대가 중요한 칸을 지키고 있다면, 그 기물을 미끼로 유혹해서 자리를 떠나게 해요. 이걸 \"수비수 끌어내기\"라고 해요. 지금 검은 룩이 8번째 줄을 지키고 있어요. 룩을 내주면 그 룩을 잡으러 나올 수밖에 없어요!","en":"If the enemy guards an important square, tempt that piece away with bait. This is called \"deflection\". Right now the black rook guards the 8th row. Offer your rook and it has to take it!"},"task":{"type":"moveTo","goal":["d8"],"goalFrom":"d6","reply":"b8d8","label":{"ko":"룩을 ⭐ 칸으로 보내 체크! 상대 룩을 끌어내요.","en":"Send the rook to the ⭐ square with check to pull the enemy rook away."},"ok":{"ko":"상대 룩이 미끼를 물고 자리를 떠났어요!","en":"The enemy rook took the bait and left its post!"},"wrong":{"ko":"그 수는 아니에요. ⭐ 칸을 찾아보세요! (미끼를 던질 칸이에요)","en":"Not that one. Find the ⭐ square! (That is where the bait goes.)"},"then":{"type":"mate","label":{"ko":"마지막 한 수예요! 체크메이트가 되는 수를 찾아보세요.","en":"One last move! Find the move that gives checkmate."},"ok":{"ko":"체크메이트! 수비수를 끌어내서 이겼어요 🎉","en":"Checkmate! Deflecting the defender won 🎉"},"wrong":{"ko":"퀸으로 체크메이트를 만들어보세요!","en":"Deliver checkmate with the queen!"}}}},{"fen":"6k1/2r2pp1/3n4/7R/4R3/4Q3/8/3K4 w - - 0 1","text":{"ko":"이번엔 나이트가 e8 칸을 지키고 있어요. 룩을 e8에 보내면 나이트가 잡으러 가야 해요. 그러면 퀸이 e8로 올라와서 마무리!","en":"This time a knight guards the e8 square. Send your rook to e8 and the knight has to take it. Then the queen jumps in to finish!"},"task":{"type":"moveTo","goal":["e8"],"goalFrom":"e4","reply":"d6e8","label":{"ko":"룩을 ⭐ 칸으로 보내 나이트를 끌어내보세요.","en":"Send the rook to the ⭐ square to pull the knight away."},"ok":{"ko":"나이트가 자리를 떠났어요!","en":"The knight left its post!"},"wrong":{"ko":"그 수는 아니에요. ⭐ 칸을 찾아보세요! (미끼를 던질 칸이에요)","en":"Not that one. Find the ⭐ square! (That is where the bait goes.)"},"then":{"type":"mate","label":{"ko":"마지막 한 수예요! 체크메이트가 되는 수를 찾아보세요.","en":"One last move! Find the move that gives checkmate."},"ok":{"ko":"체크메이트! 🎉","en":"Checkmate! 🎉"},"wrong":{"ko":"퀸으로 체크메이트를 만들어보세요!","en":"Deliver checkmate with the queen!"}}}},{"fen":"k7/pp2q3/8/6Q1/8/8/8/1K1R3R w - - 0 1","text":{"ko":"퀸처럼 힘센 기물도 미끼에 끌려올 수 있어요! 검은 퀸이 8번째 줄을 지키고 있어요. 룩을 내주면 퀸이 잡으러 와야 해요.","en":"Even a powerful queen can be dragged away by bait! The black queen guards the 8th row. Offer a rook and she has to take it."},"task":{"type":"moveTo","goal":["d8"],"goalFrom":"d1","reply":"e7d8","label":{"ko":"룩을 ⭐ 칸으로 보내 상대 퀸을 끌어내보세요.","en":"Send the rook to the ⭐ square to drag the enemy queen away."},"ok":{"ko":"퀸이 미끼를 물었어요!","en":"The queen took the bait!"},"wrong":{"ko":"그 수는 아니에요. ⭐ 칸을 찾아보세요! (미끼를 던질 칸이에요)","en":"Not that one. Find the ⭐ square! (That is where the bait goes.)"},"then":{"type":"mate","label":{"ko":"마지막 한 수예요! 체크메이트가 되는 수를 찾아보세요.","en":"One last move! Find the move that gives checkmate."},"ok":{"ko":"체크메이트! 룩을 내주고 퀸을 끌어내서 이겼어요 🎉","en":"Checkmate! You gave a rook, dragged the queen away, and won 🎉"},"wrong":{"ko":"퀸으로 체크메이트를 만들어보세요!","en":"Deliver checkmate with the queen!"}}}}]}];
   // TACTICS-DATA-END
 
+  // OPENINGS-DATA-START
+  const OPENINGS = [{"id":"italian","icon":"🍕","title":{"ko":"이탈리안 게임 (기본 원칙)","en":"Italian Game (The Basics)"},"pages":[{"fen":"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR","castle":"KQkq","text":{"ko":"오프닝은 게임의 맨 처음 10수쯤을 말해요. 잘 두는 3가지 원칙이 있어요. ① 가운데 차지하기 ② 나이트와 비숍 꺼내기 ③ 캐슬링으로 킹 지키기. 가장 유명한 오프닝 중 하나인 이탈리안 게임으로 연습해봐요!","en":"The opening is roughly the first 10 moves of a game. There are 3 golden rules: (1) take the center, (2) bring out your knights and bishops, (3) castle to protect your king. Practice them with the Italian Game, one of the most famous openings!"},"task":{"type":"moveTo","goal":["e4"],"goalFrom":"e2","auto":true,"showFrom":true,"log":true,"ok":{"ko":"가운데 폰을 두 칸! 퀸과 비숍이 움직일 길도 열렸어요. (원칙 ①) 검은색도 e5로 맞섰어요.","en":"A center pawn two squares! It also opens paths for your queen and bishop. (Rule 1) Black answered with e5."},"wrong":{"ko":"이 오프닝에서는 다른 수를 둬요. ⭐ 칸으로 두는 순서를 연습해봐요!","en":"This opening uses a different move. Practice the order: play to the ⭐ square!"},"reply":"e7e5","then":{"type":"moveTo","goal":["f3"],"goalFrom":"g1","auto":true,"showFrom":true,"log":true,"ok":{"ko":"나이트를 꺼내서 검은 e5 폰을 공격해요. (원칙 ②) 검은색은 나이트로 e5를 지켰어요.","en":"Knight out! It attacks the black pawn on e5. (Rule 2) Black defended it with a knight."},"wrong":{"ko":"이 오프닝에서는 다른 수를 둬요. ⭐ 칸으로 두는 순서를 연습해봐요!","en":"This opening uses a different move. Practice the order: play to the ⭐ square!"},"reply":"b8c6","then":{"type":"moveTo","goal":["c4"],"goalFrom":"f1","auto":true,"showFrom":true,"log":true,"ok":{"ko":"비숍을 꺼내 상대의 약한 곳 f7을 노려요. (원칙 ②) 검은색도 비숍을 꺼냈어요.","en":"Bishop out! It eyes f7, a weak spot in Black's camp. (Rule 2) Black brought out a bishop too."},"wrong":{"ko":"이 오프닝에서는 다른 수를 둬요. ⭐ 칸으로 두는 순서를 연습해봐요!","en":"This opening uses a different move. Practice the order: play to the ⭐ square!"},"reply":"f8c5","then":{"type":"moveTo","goal":["g1"],"goalFrom":"e1","auto":true,"showFrom":true,"log":true,"ok":{"ko":"캐슬링! 킹이 구석으로 가서 안전해지고, 룩도 활동할 수 있어요. (원칙 ③)","en":"Castling! The king hides in the corner and the rook joins the game. (Rule 3)"},"wrong":{"ko":"이 오프닝에서는 다른 수를 둬요. ⭐ 칸으로 두는 순서를 연습해봐요!","en":"This opening uses a different move. Practice the order: play to the ⭐ square!"},"reply":"g8f6","then":{"type":"moveTo","goal":["d3"],"goalFrom":"d2","auto":true,"showFrom":true,"log":true,"ok":{"ko":"폰 d3로 e4 폰을 든든하게 지켜줘요.","en":"The d3 pawn protects the pawn on e4 and keeps things solid."},"wrong":{"ko":"이 오프닝에서는 다른 수를 둬요. ⭐ 칸으로 두는 순서를 연습해봐요!","en":"This opening uses a different move. Practice the order: play to the ⭐ square!"},"reply":"d7d6","then":{"type":"moveTo","goal":["c3"],"goalFrom":"c2","auto":true,"showFrom":true,"log":true,"ok":{"ko":"다음에 d4로 가운데를 더 차지할 준비예요. 원칙 3가지를 모두 지켰어요. 오프닝 성공! 🎉","en":"This prepares d4 to grab even more of the center. You followed all 3 rules. Great opening! 🎉"},"wrong":{"ko":"이 오프닝에서는 다른 수를 둬요. ⭐ 칸으로 두는 순서를 연습해봐요!","en":"This opening uses a different move. Practice the order: play to the ⭐ square!"}}}}}}}}]},{"id":"spanish","icon":"💃","title":{"ko":"스페인 오프닝","en":"Spanish Opening (Ruy Lopez)"},"pages":[{"fen":"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR","castle":"KQkq","text":{"ko":"스페인 오프닝(루이 로페스)은 아주 오래되고 유명한 오프닝이에요. 비숍이 상대 나이트를 압박해서, 그 나이트가 지키던 e5 폰을 약하게 만드는 게 아이디어예요.","en":"The Spanish Opening (Ruy Lopez) is a very old and famous opening. The bishop pressures the knight that protects the e5 pawn, making that pawn weaker."},"task":{"type":"moveTo","goal":["e4"],"goalFrom":"e2","auto":true,"showFrom":true,"log":true,"ok":{"ko":"가운데 폰을 두 칸 전진! 검은색도 똑같이 맞섰어요.","en":"Center pawn forward! Black answered the same way."},"wrong":{"ko":"이 오프닝에서는 다른 수를 둬요. ⭐ 칸으로 두는 순서를 연습해봐요!","en":"This opening uses a different move. Practice the order: play to the ⭐ square!"},"reply":"e7e5","then":{"type":"moveTo","goal":["f3"],"goalFrom":"g1","auto":true,"showFrom":true,"log":true,"ok":{"ko":"나이트를 꺼내 e5 폰을 공격해요. 검은색은 나이트로 지켰어요.","en":"Knight out, attacking the e5 pawn. Black defended with a knight."},"wrong":{"ko":"이 오프닝에서는 다른 수를 둬요. ⭐ 칸으로 두는 순서를 연습해봐요!","en":"This opening uses a different move. Practice the order: play to the ⭐ square!"},"reply":"b8c6","then":{"type":"moveTo","goal":["b5"],"goalFrom":"f1","auto":true,"showFrom":true,"log":true,"ok":{"ko":"비숍으로 c6 나이트를 노려요. 이 나이트는 e5 폰을 지키는 중이에요. 검은색은 폰으로 비숍을 쫓으려 해요.","en":"The bishop eyes the c6 knight, which is protecting the e5 pawn. Black tries to chase it with a pawn."},"wrong":{"ko":"이 오프닝에서는 다른 수를 둬요. ⭐ 칸으로 두는 순서를 연습해봐요!","en":"This opening uses a different move. Practice the order: play to the ⭐ square!"},"reply":"a7a6","then":{"type":"moveTo","goal":["a4"],"goalFrom":"b5","auto":true,"showFrom":true,"log":true,"ok":{"ko":"비숍이 뒤로 물러났지만 여전히 압박하고 있어요. 폰에게 잡힐 걱정도 없어요.","en":"The bishop steps back but keeps the pressure, safe from the pawn."},"wrong":{"ko":"이 오프닝에서는 다른 수를 둬요. ⭐ 칸으로 두는 순서를 연습해봐요!","en":"This opening uses a different move. Practice the order: play to the ⭐ square!"},"reply":"g8f6","then":{"type":"moveTo","goal":["g1"],"goalFrom":"e1","auto":true,"showFrom":true,"log":true,"ok":{"ko":"캐슬링으로 킹을 안전하게!","en":"Castle to make the king safe!"},"wrong":{"ko":"이 오프닝에서는 다른 수를 둬요. ⭐ 칸으로 두는 순서를 연습해봐요!","en":"This opening uses a different move. Practice the order: play to the ⭐ square!"},"reply":"f8e7","then":{"type":"moveTo","goal":["e1"],"goalFrom":"f1","auto":true,"showFrom":true,"log":true,"ok":{"ko":"룩을 e줄로 보내 e4 폰을 지키고 가운데에 힘을 모아요. 스페인 오프닝 완성! 🎉","en":"The rook goes to the e-file to protect e4 and add power in the center. Spanish Opening done! 🎉"},"wrong":{"ko":"이 오프닝에서는 다른 수를 둬요. ⭐ 칸으로 두는 순서를 연습해봐요!","en":"This opening uses a different move. Practice the order: play to the ⭐ square!"}}}}}}}}]},{"id":"queens","icon":"👑","title":{"ko":"퀸즈 갬빗","en":"Queen's Gambit"},"pages":[{"fen":"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR","castle":"KQkq","text":{"ko":"퀸즈 갬빗은 1.d4로 시작하는 대표 오프닝이에요. c4 폰을 \"미끼\"처럼 내밀어서 상대의 가운데 폰(d5)을 끌어내려는 아이디어예요. 잡혀도 되찾을 수 있어서 진짜 희생이 아니에요!","en":"The Queen's Gambit starts with 1.d4. The c4 pawn is a little bait to pull away Black's center pawn on d5. If it is taken, you can win it back, so it is not a real sacrifice!"},"task":{"type":"moveTo","goal":["d4"],"goalFrom":"d2","auto":true,"showFrom":true,"log":true,"ok":{"ko":"퀸 앞의 폰으로 가운데를 차지해요. 검은색도 d5로 맞섰어요.","en":"The pawn in front of the queen takes the center. Black answered with d5."},"wrong":{"ko":"이 오프닝에서는 다른 수를 둬요. ⭐ 칸으로 두는 순서를 연습해봐요!","en":"This opening uses a different move. Practice the order: play to the ⭐ square!"},"reply":"d7d5","then":{"type":"moveTo","goal":["c4"],"goalFrom":"c2","auto":true,"showFrom":true,"log":true,"ok":{"ko":"폰을 하나 더 내밀어 d5 폰을 공격해요. 이게 퀸즈 갬빗이에요! 검은색은 e6로 폰을 지켰어요.","en":"Another pawn attacks d5. This is the Queen's Gambit! Black protected the pawn with e6."},"wrong":{"ko":"이 오프닝에서는 다른 수를 둬요. ⭐ 칸으로 두는 순서를 연습해봐요!","en":"This opening uses a different move. Practice the order: play to the ⭐ square!"},"reply":"e7e6","then":{"type":"moveTo","goal":["c3"],"goalFrom":"b1","auto":true,"showFrom":true,"log":true,"ok":{"ko":"나이트를 꺼내서 d5를 한 번 더 공격해요.","en":"A knight comes out and attacks d5 once more."},"wrong":{"ko":"이 오프닝에서는 다른 수를 둬요. ⭐ 칸으로 두는 순서를 연습해봐요!","en":"This opening uses a different move. Practice the order: play to the ⭐ square!"},"reply":"g8f6","then":{"type":"moveTo","goal":["g5"],"goalFrom":"c1","auto":true,"showFrom":true,"log":true,"ok":{"ko":"비숍을 꺼내서 상대 나이트를 압박해요.","en":"The bishop comes out and pressures Black's knight."},"wrong":{"ko":"이 오프닝에서는 다른 수를 둬요. ⭐ 칸으로 두는 순서를 연습해봐요!","en":"This opening uses a different move. Practice the order: play to the ⭐ square!"},"reply":"f8e7","then":{"type":"moveTo","goal":["e3"],"goalFrom":"e2","auto":true,"showFrom":true,"log":true,"ok":{"ko":"폰으로 가운데를 든든히 받치고, f1 비숍이 나올 길도 열어줘요. 검은색은 캐슬링했어요.","en":"A solid pawn move that also opens the path for the f1 bishop. Black castled."},"wrong":{"ko":"이 오프닝에서는 다른 수를 둬요. ⭐ 칸으로 두는 순서를 연습해봐요!","en":"This opening uses a different move. Practice the order: play to the ⭐ square!"},"reply":"e8g8","then":{"type":"moveTo","goal":["f3"],"goalFrom":"g1","auto":true,"showFrom":true,"log":true,"ok":{"ko":"마지막 나이트까지 꺼냈어요. 퀸즈 갬빗 완성! 🎉","en":"Your last knight is out. Queen's Gambit complete! 🎉"},"wrong":{"ko":"이 오프닝에서는 다른 수를 둬요. ⭐ 칸으로 두는 순서를 연습해봐요!","en":"This opening uses a different move. Practice the order: play to the ⭐ square!"}}}}}}}}]},{"id":"london","icon":"🎡","title":{"ko":"런던 시스템","en":"London System"},"pages":[{"fen":"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR","castle":"KQkq","text":{"ko":"런던 시스템은 외우기 쉬워서 인기가 많은 오프닝이에요. 비숍을 f4에 먼저 꺼내는 게 가장 큰 특징이에요.","en":"The London System is popular because it is easy to remember. Its big idea is bringing the bishop out to f4 early."},"task":{"type":"moveTo","goal":["d4"],"goalFrom":"d2","auto":true,"showFrom":true,"log":true,"ok":{"ko":"가운데 폰을 두 칸 전진! 검은색도 맞섰어요.","en":"Center pawn forward! Black answered the same way."},"wrong":{"ko":"이 오프닝에서는 다른 수를 둬요. ⭐ 칸으로 두는 순서를 연습해봐요!","en":"This opening uses a different move. Practice the order: play to the ⭐ square!"},"reply":"d7d5","then":{"type":"moveTo","goal":["f4"],"goalFrom":"c1","auto":true,"showFrom":true,"log":true,"ok":{"ko":"폰에 막히기 전에 비숍부터 꺼내요. 이게 런던 시스템의 핵심이에요!","en":"Bring the bishop out before your own pawns block it. This is the heart of the London System!"},"wrong":{"ko":"이 오프닝에서는 다른 수를 둬요. ⭐ 칸으로 두는 순서를 연습해봐요!","en":"This opening uses a different move. Practice the order: play to the ⭐ square!"},"reply":"g8f6","then":{"type":"moveTo","goal":["e3"],"goalFrom":"e2","auto":true,"showFrom":true,"log":true,"ok":{"ko":"폰 e3로 비숍을 지켜주고 f1 비숍이 나올 길도 열어요.","en":"The e3 pawn protects the bishop and opens the path for the f1 bishop."},"wrong":{"ko":"이 오프닝에서는 다른 수를 둬요. ⭐ 칸으로 두는 순서를 연습해봐요!","en":"This opening uses a different move. Practice the order: play to the ⭐ square!"},"reply":"e7e6","then":{"type":"moveTo","goal":["f3"],"goalFrom":"g1","auto":true,"showFrom":true,"log":true,"ok":{"ko":"나이트를 꺼내서 가운데를 지켜요. 검은색은 c5로 d4를 공격해요.","en":"A knight comes out to guard the center. Black attacks d4 with c5."},"wrong":{"ko":"이 오프닝에서는 다른 수를 둬요. ⭐ 칸으로 두는 순서를 연습해봐요!","en":"This opening uses a different move. Practice the order: play to the ⭐ square!"},"reply":"c7c5","then":{"type":"moveTo","goal":["c3"],"goalFrom":"c2","auto":true,"showFrom":true,"log":true,"ok":{"ko":"폰 c3로 d4 폰을 단단하게 받쳐요.","en":"The c3 pawn supports the d4 pawn firmly."},"wrong":{"ko":"이 오프닝에서는 다른 수를 둬요. ⭐ 칸으로 두는 순서를 연습해봐요!","en":"This opening uses a different move. Practice the order: play to the ⭐ square!"},"reply":"b8c6","then":{"type":"moveTo","goal":["d2"],"goalFrom":"b1","auto":true,"showFrom":true,"log":true,"ok":{"ko":"남은 나이트도 꺼냈어요. 어떤 상대가 와도 쓸 수 있는 튼튼한 시작이에요. 런던 시스템 완성! 🎉","en":"The last knight is out. A solid setup you can use against almost anything. London System complete! 🎉"},"wrong":{"ko":"이 오프닝에서는 다른 수를 둬요. ⭐ 칸으로 두는 순서를 연습해봐요!","en":"This opening uses a different move. Practice the order: play to the ⭐ square!"}}}}}}}}]},{"id":"scholar","icon":"⚠️","title":{"ko":"스콜라 메이트 (4수 외통)","en":"Scholar's Mate"},"pages":[{"fen":"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR","castle":"KQkq","text":{"ko":"스콜라 메이트는 퀸과 비숍으로 f7을 공격해서 단 4수 만에 체크메이트를 하는 속임수예요. 초보끼리 자주 나와요! 상대가 실수하면 이렇게 이길 수 있어요.","en":"Scholar's Mate is a trick that checkmates in just 4 moves by attacking f7 with the queen and bishop. It happens a lot between beginners! If your opponent slips, you win like this."},"task":{"type":"moveTo","goal":["e4"],"goalFrom":"e2","auto":true,"showFrom":true,"log":true,"ok":{"ko":"가운데 폰 전진! 퀸과 비숍의 길이 열렸어요.","en":"Center pawn forward! It opens lines for the queen and bishop."},"wrong":{"ko":"이 오프닝에서는 다른 수를 둬요. ⭐ 칸으로 두는 순서를 연습해봐요!","en":"This opening uses a different move. Practice the order: play to the ⭐ square!"},"reply":"e7e5","then":{"type":"moveTo","goal":["c4"],"goalFrom":"f1","auto":true,"showFrom":true,"log":true,"ok":{"ko":"비숍이 f7을 노려요. f7은 킹 옆의 약한 칸이에요.","en":"The bishop eyes f7, the weak square next to the king."},"wrong":{"ko":"이 오프닝에서는 다른 수를 둬요. ⭐ 칸으로 두는 순서를 연습해봐요!","en":"This opening uses a different move. Practice the order: play to the ⭐ square!"},"reply":"b8c6","then":{"type":"moveTo","goal":["h5"],"goalFrom":"d1","auto":true,"showFrom":true,"log":true,"ok":{"ko":"퀸도 f7을 노려요! 이제 f7이 두 번 공격받아요. 그런데 검은색이 나이트로 퀸을 공격하며 f7을 못 지켰어요.","en":"The queen eyes f7 too! Now f7 is attacked twice. Black attacked the queen with a knight but forgot to guard f7."},"wrong":{"ko":"이 오프닝에서는 다른 수를 둬요. ⭐ 칸으로 두는 순서를 연습해봐요!","en":"This opening uses a different move. Practice the order: play to the ⭐ square!"},"reply":"g8f6","then":{"type":"moveTo","goal":["f7"],"goalFrom":"h5","auto":true,"showFrom":true,"log":true,"ok":{"ko":"체크메이트! 비숍이 퀸을 받쳐주고 있어서 킹이 퀸을 잡을 수 없어요. 🎉","en":"Checkmate! The bishop protects the queen, so the king cannot take her. 🎉"},"wrong":{"ko":"이 오프닝에서는 다른 수를 둬요. ⭐ 칸으로 두는 순서를 연습해봐요!","en":"This opening uses a different move. Practice the order: play to the ⭐ square!"}}}}}},{"fen":"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR","castle":"KQkq","text":{"ko":"하지만 상대가 제대로 막으면 퀸이 위험해질 수 있어요. 이번엔 검은색이 g6로 퀸을 쫓아내요. 속임수가 안 통하면 원칙대로 두는 게 좋아요!","en":"But if your opponent defends well, your queen can be in danger. This time Black chases her away with g6. When the trick fails, go back to the golden rules!"},"task":{"type":"moveTo","goal":["e4"],"goalFrom":"e2","auto":true,"showFrom":true,"log":true,"ok":{"ko":"가운데 폰 전진!","en":"Center pawn forward!"},"wrong":{"ko":"이 오프닝에서는 다른 수를 둬요. ⭐ 칸으로 두는 순서를 연습해봐요!","en":"This opening uses a different move. Practice the order: play to the ⭐ square!"},"reply":"e7e5","then":{"type":"moveTo","goal":["c4"],"goalFrom":"f1","auto":true,"showFrom":true,"log":true,"ok":{"ko":"비숍이 f7을 노려요.","en":"The bishop eyes f7."},"wrong":{"ko":"이 오프닝에서는 다른 수를 둬요. ⭐ 칸으로 두는 순서를 연습해봐요!","en":"This opening uses a different move. Practice the order: play to the ⭐ square!"},"reply":"b8c6","then":{"type":"moveTo","goal":["h5"],"goalFrom":"d1","auto":true,"showFrom":true,"log":true,"ok":{"ko":"퀸이 f7을 노려요. 그런데 검은색이 g6 폰으로 퀸을 공격했어요!","en":"The queen eyes f7. But Black attacks her with the g6 pawn!"},"wrong":{"ko":"이 오프닝에서는 다른 수를 둬요. ⭐ 칸으로 두는 순서를 연습해봐요!","en":"This opening uses a different move. Practice the order: play to the ⭐ square!"},"reply":"g7g6","then":{"type":"moveTo","goal":["f3"],"goalFrom":"h5","auto":true,"showFrom":true,"log":true,"ok":{"ko":"퀸이 f3로 물러났어요. 여기서도 f7을 노리지만 검은색이 나이트로 지켰어요.","en":"The queen retreats to f3. She still eyes f7, but Black defended with a knight."},"wrong":{"ko":"이 오프닝에서는 다른 수를 둬요. ⭐ 칸으로 두는 순서를 연습해봐요!","en":"This opening uses a different move. Practice the order: play to the ⭐ square!"},"reply":"g8f6","then":{"type":"moveTo","goal":["c3"],"goalFrom":"b1","auto":true,"showFrom":true,"log":true,"ok":{"ko":"속임수가 막혔으니 이제 원칙대로 나이트를 꺼내요. 퀸을 일찍 내보내면 쫓겨 다닐 수 있다는 걸 기억해요! 🎉","en":"The trick is stopped, so go back to the rules and bring out a knight. Remember: an early queen can get chased around! 🎉"},"wrong":{"ko":"이 오프닝에서는 다른 수를 둬요. ⭐ 칸으로 두는 순서를 연습해봐요!","en":"This opening uses a different move. Practice the order: play to the ⭐ square!"}}}}}}},{"fen":"r1bqkbnr/pppp1ppp/2n5/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR","castle":"KQkq","text":{"ko":"내가 검은색(상대)이라면 어떻게 막을까요? f7만 지키면 돼요! ① g6: 폰으로 퀸을 쫓아내요. ② Qe7: 퀸으로 f7을 지켜요. ③ Nh6: 나이트로 f7을 지켜요. 조심! Nf6는 퀸을 공격하지만 f7을 지키지 못해서 4수 만에 체크메이트를 당해요. 이 그림은 백이 퀸을 h5에 둔 순간이에요.","en":"How would I stop it as Black? Just guard f7! (1) g6: chase the queen away with a pawn. (2) Qe7: guard f7 with your queen. (3) Nh6: guard f7 with a knight. Careful! Nf6 attacks the queen but does not guard f7, so you get checkmated in 4 moves. This picture shows the moment White puts the queen on h5."}}]},{"id":"sicilian","icon":"🌋","title":{"ko":"시실리안 디펜스 상대하기","en":"Facing the Sicilian"},"pages":[{"fen":"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR","castle":"KQkq","text":{"ko":"시실리안 디펜스는 흑이 1...c5로 맞서는 아주 유명한 응수예요. 백으로서 어떻게 두면 좋은지 연습해요. 핵심은 나이트를 d4 칸으로 보내 가운데를 차지하는 거예요!","en":"The Sicilian Defense is Black's very famous answer 1...c5. Practice how White can respond. The key idea is to put a knight on d4 and control the center!"},"task":{"type":"moveTo","goal":["e4"],"goalFrom":"e2","auto":true,"showFrom":true,"log":true,"ok":{"ko":"가운데 폰 전진! 검은색은 c5로 맞섰어요. 이게 시실리안이에요.","en":"Center pawn forward! Black answered with c5. That is the Sicilian."},"wrong":{"ko":"이 오프닝에서는 다른 수를 둬요. ⭐ 칸으로 두는 순서를 연습해봐요!","en":"This opening uses a different move. Practice the order: play to the ⭐ square!"},"reply":"c7c5","then":{"type":"moveTo","goal":["f3"],"goalFrom":"g1","auto":true,"showFrom":true,"log":true,"ok":{"ko":"나이트를 꺼내서 d4 칸을 노려요.","en":"A knight comes out and eyes the d4 square."},"wrong":{"ko":"이 오프닝에서는 다른 수를 둬요. ⭐ 칸으로 두는 순서를 연습해봐요!","en":"This opening uses a different move. Practice the order: play to the ⭐ square!"},"reply":"d7d6","then":{"type":"moveTo","goal":["d4"],"goalFrom":"d2","auto":true,"showFrom":true,"log":true,"ok":{"ko":"폰으로 가운데를 열어요. 검은 폰이 잡아도 나이트로 되잡을 수 있어요.","en":"The pawn opens the center. If Black takes it, you can take back with the knight."},"wrong":{"ko":"이 오프닝에서는 다른 수를 둬요. ⭐ 칸으로 두는 순서를 연습해봐요!","en":"This opening uses a different move. Practice the order: play to the ⭐ square!"},"reply":"c5d4","then":{"type":"moveTo","goal":["d4"],"goalFrom":"f3","auto":true,"showFrom":true,"log":true,"ok":{"ko":"나이트로 되잡았어요! 이제 나이트가 가운데 한복판에 서 있어요. 검은 나이트가 e4를 공격해요.","en":"Taken back with the knight! It now stands right in the center. The black knight attacks e4."},"wrong":{"ko":"이 오프닝에서는 다른 수를 둬요. ⭐ 칸으로 두는 순서를 연습해봐요!","en":"This opening uses a different move. Practice the order: play to the ⭐ square!"},"reply":"g8f6","then":{"type":"moveTo","goal":["c3"],"goalFrom":"b1","auto":true,"showFrom":true,"log":true,"ok":{"ko":"나머지 나이트를 꺼내 공격받은 e4 폰을 지켜줘요.","en":"The other knight comes out and protects the attacked e4 pawn."},"wrong":{"ko":"이 오프닝에서는 다른 수를 둬요. ⭐ 칸으로 두는 순서를 연습해봐요!","en":"This opening uses a different move. Practice the order: play to the ⭐ square!"},"reply":"a7a6","then":{"type":"moveTo","goal":["e3"],"goalFrom":"c1","auto":true,"showFrom":true,"log":true,"ok":{"ko":"비숍을 꺼내서 가운데 나이트를 든든하게 받쳐요. 시실리안 대비 성공! 🎉","en":"The bishop comes out to support the knight in the center. Ready for the Sicilian! 🎉"},"wrong":{"ko":"이 오프닝에서는 다른 수를 둬요. ⭐ 칸으로 두는 순서를 연습해봐요!","en":"This opening uses a different move. Practice the order: play to the ⭐ square!"}}}}}}}}]}];
+  // OPENINGS-DATA-END
+
   let SL = null, studyToken = 0;
-  function curLessons() { return currentView === 'tactics' ? TACTICS : LESSONS; }
-  function curKey() { return currentView === 'tactics' ? 'chess-tactics-done' : 'chess-study-done'; }
+  function curLessons() { return currentView === 'tactics' ? TACTICS : (currentView === 'openings' ? OPENINGS : LESSONS); }
+  function curKey() { return 'chess-' + (currentView === 'tactics' ? 'tactics' : (currentView === 'openings' ? 'openings' : 'study')) + '-done'; }
   const sBoardEl = document.getElementById('s-board');
   function Lg(o) { return o[lang]; }
   function loadDoneLessons() {
@@ -1781,9 +1914,12 @@ const ALL_PUZZLES = [
     try { localStorage.setItem(curKey(), JSON.stringify(a)); } catch (e) {}
   }
 
+  function setCompact(on) { document.body.setAttribute('data-compact', on ? '1' : '0'); }
+
   function showStudyList() {
     studyToken++;
     SL = null;
+    setCompact(false);
     document.getElementById('study-list').hidden = false;
     document.getElementById('study-lesson').hidden = true;
     renderStudyAll();
@@ -1794,10 +1930,16 @@ const ALL_PUZZLES = [
     const s = t(), done = loadDoneLessons();
     const grid = document.getElementById('lesson-grid');
     grid.innerHTML = '';
+    const total = curLessons().length;
+    const nDone = curLessons().filter(function (l) { return done.indexOf(l.id) !== -1; }).length;
+    document.getElementById('list-count').textContent = s.listProgress(nDone, total);
+    document.getElementById('list-bar').style.width = Math.round(nDone / total * 100) + '%';
     curLessons().forEach(function (lesson, i) {
       const b = document.createElement('button');
       b.type = 'button'; b.className = 'lesson-card';
-      const ico = document.createElement('span'); ico.className = 'ico'; ico.textContent = lesson.icon;
+      const ico = document.createElement('span'); ico.className = 'ico';
+      const pmap = { '♙': 'P', '♖': 'R', '♗': 'B', '♕': 'Q', '♘': 'N', '♔': 'K' };
+      if (pmap[lesson.icon]) ico.innerHTML = pieceSvg(pmap[lesson.icon]); else ico.textContent = lesson.icon;
       const num = document.createElement('span'); num.className = 'num'; num.textContent = s.lessonLabel(i + 1);
       const tt = document.createElement('span'); tt.className = 'tt'; tt.textContent = Lg(lesson.title);
       const cnt = document.createElement('span'); cnt.className = 'cnt'; cnt.textContent = s.lessonPages(lesson.pages.length);
@@ -1812,10 +1954,11 @@ const ALL_PUZZLES = [
     studyToken++;
     const pg = curLessons()[li].pages[pi];
     const st0 = sStateFromPage(pg);
-    SL = { li: li, pi: pi, state: st0, stageState: st0, task: pg.task, last: null, sel: null, targets: [], done: !pg.task, tapped: {}, tapSq: null,
+    SL = { li: li, pi: pi, state: st0, stageState: st0, task: pg.task, last: null, log: [], logOn: !!(pg.task && pg.task.log), sel: null, targets: [], done: !pg.task, tapped: {}, tapSq: null,
            promoPending: null, locked: false, finished: false, fb: null };
     document.getElementById('study-list').hidden = true;
     document.getElementById('study-lesson').hidden = false;
+    setCompact(true);
     window.scrollTo(0, 0);
     renderStudy();
   }
@@ -1884,6 +2027,7 @@ const ALL_PUZZLES = [
     SL.sel = null; SL.targets = []; SL.promoPending = null;
     SL.last = [[m.fr, m.fc], [m.tr, m.tc]];
     if (ok) {
+      if (SL.logOn) SL.log.push(sanOf(SL.state, m, ns, res.captured));
       SL.state = ns;
       if (task.type === 'escape') {
         const key = res.captured ? 'escapeCapture' : (m.piece.toUpperCase() === 'K' ? 'escapeKing' : 'escapeBlock');
@@ -1916,7 +2060,11 @@ const ALL_PUZZLES = [
       const fr = 8 - Number(task.reply.charAt(1)), fc = task.reply.charCodeAt(0) - 97;
       const tr = 8 - Number(task.reply.charAt(3)), tc = task.reply.charCodeAt(2) - 97;
       const mv = legalMoves(SL.state, fr, fc).filter(function (x) { return x.tr === tr && x.tc === tc; })[0];
-      if (mv) { SL.state = applyMove(SL.state, mv, 'Q').state; SL.last = [[fr, fc], [tr, tc]]; }
+      if (mv) {
+        const rr = applyMove(SL.state, mv, 'Q');
+        if (SL.logOn) SL.log.push(sanOf(SL.state, mv, rr.state, rr.captured));
+        SL.state = rr.state; SL.last = [[fr, fc], [tr, tc]];
+      }
       SL.stageState = SL.state;
       SL.task = task.then;
       SL.locked = false;
@@ -1924,10 +2072,23 @@ const ALL_PUZZLES = [
     }, 1000);
   }
 
+  function taskLabel(task) {
+    if (task.auto) {
+      const fr = 8 - Number(task.goalFrom.charAt(1)), fc = task.goalFrom.charCodeAt(0) - 97;
+      const piece = SL.state.board[fr][fc];
+      if (!piece) return '';
+      const to = task.goal[0];
+      const castle = piece.toUpperCase() === 'K' && Math.abs(fc - (to.charCodeAt(0) - 97)) === 2;
+      return t().openMove(t().pieces[piece.toUpperCase()], task.goalFrom, to, castle);
+    }
+    return Lg(task.label);
+  }
+
   function renderStudy() {
     if (!SL) return;
     const s = t(), lesson = curLessons()[SL.li], pg = lesson.pages[SL.pi], task = SL.task, st = SL.state;
     const goals = (task && task.goal && !SL.done) ? task.goal : [];
+    const fromHint = (task && task.showFrom && !SL.done) ? task.goalFrom : null;
     sBoardEl.innerHTML = '';
     for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
       const cell = document.createElement('div');
@@ -1941,6 +2102,7 @@ const ALL_PUZZLES = [
         cell.appendChild(span);
       }
       if (goals.indexOf(sqName(r, c)) !== -1) cell.classList.add('goal');
+      if (fromHint && sqName(r, c) === fromHint) cell.classList.add('from-hint');
       if (SL.last && ((SL.last[0][0] === r && SL.last[0][1] === c) || (SL.last[1][0] === r && SL.last[1][1] === c))) cell.classList.add('last');
       if ((SL.sel && SL.sel[0] === r && SL.sel[1] === c) || (SL.tapSq && SL.tapSq[0] === r && SL.tapSq[1] === c)) cell.classList.add('selected');
       const tm = SL.targets.filter(function (m) { return m.tr === r && m.tc === c; });
@@ -1965,18 +2127,25 @@ const ALL_PUZZLES = [
     const isLast = SL.pi === lesson.pages.length - 1;
     const hasNextLesson = SL.li + 1 < curLessons().length;
     if (SL.finished) {
-      textEl.textContent = s.lessonDoneTitle + ' ' + s.lessonDoneText(Lg(lesson.title)) + (hasNextLesson ? '' : ' ' + (currentView === 'tactics' ? s.allDoneTactics : s.allDone));
+      textEl.textContent = s.lessonDoneTitle + ' ' + s.lessonDoneText(Lg(lesson.title)) + (hasNextLesson ? '' : ' ' + (currentView === 'tactics' ? s.allDoneTactics : (currentView === 'openings' ? s.allDoneOpenings : s.allDone)));
       taskEl.hidden = true; fbEl.textContent = ''; fbEl.className = 'status-text';
     } else {
       textEl.textContent = Lg(pg.text);
       if (task) {
         taskEl.hidden = false;
-        taskEl.textContent = s.missionLabel + ': ' + Lg(task.label) + (task.type === 'explore' ? ' ' + s.exploreProgress(Object.keys(SL.tapped).length) : '');
+        taskEl.textContent = s.missionLabel + ': ' + taskLabel(task) + (task.type === 'explore' ? ' ' + s.exploreProgress(Object.keys(SL.tapped).length) : '');
       } else taskEl.hidden = true;
       fbEl.textContent = SL.fb ? SL.fb.f() : '';
       fbEl.className = 'status-text' + (SL.fb && SL.fb.cls ? ' ' + SL.fb.cls : '');
     }
 
+    const logEl = document.getElementById('s-log');
+    if (SL.logOn && SL.log.length) {
+      let out = '';
+      SL.log.forEach(function (mv, i) { out += (i % 2 === 0 ? (i ? '   ' : '') + (i / 2 + 1) + '. ' : ' ') + mv; });
+      logEl.textContent = s.logTitle + ': ' + out;
+      logEl.hidden = false;
+    } else logEl.hidden = true;
     const nextB = document.getElementById('s-next'), skipB = document.getElementById('s-skip'), retryB = document.getElementById('s-retry'), prevB = document.getElementById('s-prev'), listB = document.getElementById('s-list');
     nextB.hidden = SL.finished && !hasNextLesson;
     nextB.textContent = SL.finished ? s.nextLesson : (isLast ? s.finishLesson : s.nextPage);
@@ -2056,17 +2225,19 @@ const ALL_PUZZLES = [
     currentView = v;
     menuView.hidden = v !== 'menu';
     quizView.hidden = v !== 'quiz';
-    studyView.hidden = !(v === 'study' || v === 'tactics');
+    studyView.hidden = !(v === 'study' || v === 'tactics' || v === 'openings');
     battleView.hidden = v !== 'battle';
     homeBtn.hidden = v === 'menu';
+    setCompact(v === 'quiz' || v === 'battle');
     applyStaticStrings();
     if (v === 'quiz') fullReset();
     if (v === 'battle') startBattle();
-    if (v === 'study' || v === 'tactics') showStudyList();
+    if (v === 'study' || v === 'tactics' || v === 'openings') showStudyList();
     window.scrollTo(0, 0);
   }
   document.getElementById('menu-study').addEventListener('click', function () { showView('study'); });
   document.getElementById('menu-tactics').addEventListener('click', function () { showView('tactics'); });
+  document.getElementById('menu-openings').addEventListener('click', function () { showView('openings'); });
   document.getElementById('menu-quiz').addEventListener('click', function () { showView('quiz'); });
   document.getElementById('menu-battle').addEventListener('click', function () { showView('battle'); });
   homeBtn.addEventListener('click', function () { showView('menu'); });
@@ -2076,6 +2247,7 @@ const ALL_PUZZLES = [
   langKoBtn.addEventListener('click', function () { setLang('ko'); });
   langEnBtn.addEventListener('click', function () { setLang('en'); });
 
+  document.getElementById('brand-ico').innerHTML = pieceSvg('N');
   showView('menu');
 })();
 </script>
