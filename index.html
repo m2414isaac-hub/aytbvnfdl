@@ -440,6 +440,19 @@
     .lesson-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
     .lesson-card { padding: 14px 14px; }
   }
+
+  /* ---- Quiz extras: step chip, best score, result stars, sound button ---- */
+  .meta-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .step-chip { font-size: 13px; font-weight: 600; color: var(--accent-gold); border: 1px solid var(--accent-gold); border-radius: 999px; padding: 4px 12px; background: var(--panel); }
+  .best-line { margin-top: 12px; font-size: 13.5px; color: var(--text-muted); }
+  .best-line:empty { display: none; }
+  .done-stars { font-size: 56px; letter-spacing: 8px; color: var(--accent-gold); line-height: 1.1; margin-bottom: 4px; }
+  .done-card h2 { margin-bottom: 14px; }
+  .done-card p.done-score { font-family: var(--serif); font-size: 24px; font-weight: 600; color: var(--text-primary); margin: 0 0 6px; }
+  .done-card p.done-first { margin: 0 0 6px; font-size: 15px; }
+  .done-card p.done-best { margin: 0 0 20px; font-size: 15px; }
+  .done-card p.done-best.new { color: var(--accent-good); font-weight: 600; font-size: 17px; }
+  #sound-btn { min-width: 46px; font-size: 16px; padding-left: 10px; padding-right: 10px; }
 </style>
 </head>
 <body>
@@ -454,6 +467,7 @@
         <button id="home-btn" class="lang-btn" type="button" hidden></button>
         <button id="lang-ko" class="lang-btn" type="button">한국어</button>
         <button id="lang-en" class="lang-btn" type="button">English</button>
+        <button id="sound-btn" class="lang-btn" type="button"></button>
       </div>
     </div>
   </header>
@@ -489,6 +503,7 @@
         <span class="menu-text">
           <span class="menu-title" id="menu-quiz-title"></span>
           <span class="menu-desc" id="menu-quiz-desc"></span>
+          <span class="menu-meta" id="menu-quiz-meta"></span>
         </span>
       </button>
       <button id="menu-battle" class="menu-card" type="button">
@@ -505,7 +520,7 @@
   <div class="layout">
     <div class="board-column">
       <div class="board-meta">
-        <span class="difficulty-badge"><span id="diff-dot" class="difficulty-dot"></span><span id="diff-label"></span></span>
+        <span class="meta-row"><span class="difficulty-badge"><span id="diff-dot" class="difficulty-dot"></span><span id="diff-label"></span></span><span class="step-chip" id="step-chip" hidden></span></span>
         <span class="prompt-text" id="prompt-text"></span>
       </div>
 
@@ -531,6 +546,7 @@
           <span id="turn-note-inline"></span>
         </div>
         <div class="progress-bar"><div class="progress-bar-fill" id="progress-fill" style="width:0%"></div></div>
+        <div class="best-line" id="best-line"></div>
       </div>
 
       <div class="panel-card controls">
@@ -545,8 +561,11 @@
   </div>
 
   <div class="panel-card done-card" id="done-card">
+    <div class="done-stars" id="done-stars" role="img"></div>
     <h2 id="done-title"></h2>
-    <p id="done-summary"></p>
+    <p class="done-score" id="done-summary"></p>
+    <p class="done-first" id="done-first"></p>
+    <p class="done-best" id="done-best"></p>
     <button id="restart-btn" class="primary" type="button"></button>
   </div>
   </div>
@@ -739,7 +758,68 @@ const ALL_PUZZLES = [
   {fen:"7B/n2p3q/7Q/5br1/1R6/1p3Kbr/pppR4/1k6 w - - 0 1",solution:["f3g2","h6f6"],kind:"fork",difficulty:"hard"},
   {fen:"2r5/4NN2/5q2/4Q1br/2p5/K5p1/5n2/R2n3k w - - 0 1",solution:["e5e2"],kind:"fork",difficulty:"hard"},
   {fen:"N2b1r2/q2Q4/1bn5/6r1/5p2/4Bp2/5ppp/1K4k1 w - - 0 1",solution:["d7d1"],kind:"mate",difficulty:"hard"},
-  {fen:"1R2b3/5qb1/K1kr4/1r1p3n/8/2N5/1n2p3/8 w - - 0 1",solution:["b8c8"],kind:"fork_check",difficulty:"hard"}
+  {fen:"1R2b3/5qb1/K1kr4/1r1p3n/8/2N5/1n2p3/8 w - - 0 1",solution:["b8c8"],kind:"fork_check",difficulty:"hard"},
+  {fen:"2q5/2k5/8/8/8/8/1R6/6K1 w - - 0 1",kind:"skewer",difficulty:"easy",steps:[{sol:["b2c2"]},{reply:"c7d7",sol:["c2c8"]}]},
+  {fen:"1r6/8/6Q1/1k6/8/8/6K1/8 w - - 0 1",kind:"skewer",difficulty:"easy",steps:[{sol:["g6b1"]},{reply:"b5c5",sol:["b1b8"]}]},
+  {fen:"8/8/8/n7/4Q3/2k5/8/K7 w - - 0 1",kind:"skewer",difficulty:"easy",steps:[{sol:["e4e1"]},{reply:"c3c2",sol:["e1a5"]}]},
+  {fen:"8/2k2b2/8/8/8/R7/8/3K4 w - - 0 1",kind:"skewer",difficulty:"easy",steps:[{sol:["a3a7"]},{reply:"c7c6",sol:["a7f7"]}]},
+  {fen:"2B5/p7/1p2N3/3k4/4q3/5n2/6K1/8 w - - 0 1",kind:"skewer",difficulty:"medium",steps:[{sol:["c8b7"]},{reply:"d5e5",sol:["b7e4"]}]},
+  {fen:"3k1r2/4p3/R7/8/8/7P/1K1b4/8 w - - 0 1",kind:"skewer",difficulty:"medium",steps:[{sol:["a6a8"]},{reply:"d8d7",sol:["a8f8"]}]},
+  {fen:"5R2/4p1r1/8/p5p1/3k4/8/6K1/3q4 w - - 0 1",kind:"skewer",difficulty:"medium",steps:[{sol:["f8d8"]},{reply:"d4e4",sol:["d8d1"]}]},
+  {fen:"2bB4/8/8/2k5/8/1R6/P1K5/6N1 w - - 0 1",kind:"skewer",difficulty:"medium",steps:[{sol:["b3c3"]},{reply:"c5d5",sol:["c3c8"]}]},
+  {fen:"8/3B1p2/8/7p/8/5k2/6nK/2N5 w - - 0 1",kind:"skewer",difficulty:"medium",steps:[{sol:["d7c6"]},{reply:"f3f2",sol:["c6g2"]}]},
+  {fen:"4R3/8/qk3p2/pp3p2/P3P3/8/1K1P4/8 w - - 0 1",kind:"skewer",difficulty:"hard",steps:[{sol:["e8e6"]},{reply:"b6b7",sol:["e6a6"]}]},
+  {fen:"8/pp2bB2/8/2p5/2P1k3/8/PP1P1R2/5K2 w - - 0 1",kind:"skewer",difficulty:"hard",steps:[{sol:["f2e2"]},{reply:"e4d3",sol:["e2e7"]}]},
+  {fen:"8/1p3q2/8/3p4/P1n2k2/1n5P/6P1/5KQ1 w - - 0 1",kind:"skewer",difficulty:"hard",steps:[{sol:["g1f2"]},{reply:"f4e4",sol:["f2f7"]}]},
+  {fen:"7Q/1pb2k2/3p4/2b5/8/1PP5/3K3P/8 w - - 0 1",kind:"skewer",difficulty:"hard",steps:[{sol:["h8h7"]},{reply:"f7f6",sol:["h7c7"]}]},
+  {fen:"8/8/3p3k/7n/8/6PR/4K3/8 w - - 0 1",kind:"pin",difficulty:"easy",steps:[{sol:["g3g4"]},{reply:"h6h7",sol:["g4h5","h3h5"]}]},
+  {fen:"4k3/4b3/4R3/3P4/8/8/8/2K5 w - - 0 1",kind:"pin",difficulty:"easy",steps:[{sol:["d5d6"]},{reply:"e8d7",sol:["e6e7"]}]},
+  {fen:"8/8/1B3k2/5b2/8/4P3/8/5R1K w - - 0 1",kind:"pin",difficulty:"easy",steps:[{sol:["e3e4"]},{reply:"f6f7",sol:["e4f5","f1f5"]}]},
+  {fen:"8/2k5/7B/4r3/8/8/8/2K5 w - - 0 1",kind:"pin",difficulty:"easy",steps:[{sol:["h6f4"]},{reply:"c7d6",sol:["f4e5"]}]},
+  {fen:"8/k4p2/n5p1/8/1P2R3/R7/1P6/3K4 w - - 0 1",kind:"pin",difficulty:"medium",steps:[{sol:["b4b5"]},{reply:"a7a8",sol:["b5a6","a3a6"]}]},
+  {fen:"7b/1k1n4/4R3/7B/8/8/P2K4/8 w - - 0 1",kind:"pin",difficulty:"medium",steps:[{sol:["e6e7"]},{reply:"h8f6",sol:["e7d7"]}]},
+  {fen:"8/p2k4/3b4/3R4/4P3/8/K7/3N4 w - - 0 1",kind:"pin",difficulty:"medium",steps:[{sol:["e4e5"]},{reply:"d7e6",sol:["d5d6"]}]},
+  {fen:"4k3/4b3/8/4RP1N/2B5/8/8/3K4 w - - 0 1",kind:"pin",difficulty:"medium",steps:[{sol:["f5f6"]},{reply:"e8f8",sol:["f6e7"]}]},
+  {fen:"B7/1n6/2k4p/P7/8/7P/5K2/8 w - - 0 1",kind:"pin",difficulty:"medium",steps:[{sol:["a5a6"]},{reply:"c6c5",sol:["a8b7","a6b7"]}]},
+  {fen:"8/3R1n1k/8/4P1nn/8/1P2bP2/8/K7 w - - 0 1",kind:"pin",difficulty:"hard",steps:[{sol:["e5e6"]},{reply:"h7h6",sol:["e6f7"]}]},
+  {fen:"4k3/2p3bN/2r5/8/2B3P1/1P6/K1P5/6n1 w - - 0 1",kind:"pin",difficulty:"hard",steps:[{sol:["c4b5"]},{reply:"e8d7",sol:["b5c6"]}]},
+  {fen:"7k/8/7b/p7/3P2P1/5N1R/5K2/n1b5 w - - 0 1",kind:"pin",difficulty:"hard",steps:[{sol:["g4g5"]},{reply:"h8g7",sol:["g5h6","h3h6"]}]},
+  {fen:"5k2/4n2p/3B4/N4P2/b7/2Pn4/8/1K6 w - - 0 1",kind:"pin",difficulty:"hard",steps:[{sol:["f5f6"]},{reply:"f8f7",sol:["d6e7","f6e7"]}]},
+  {fen:"8/8/1QN1k3/8/8/5r2/7K/8 w - - 0 1",kind:"discovered",difficulty:"easy",steps:[{sol:["c6d4"]},{reply:"e6e5",sol:["d4f3"]}]},
+  {fen:"8/5r2/k7/8/8/8/4R1K1/5B2 w - - 0 1",kind:"discovered",difficulty:"easy",steps:[{sol:["e2f2"]},{reply:"a6a5",sol:["f2f7"]}]},
+  {fen:"4q3/8/1k6/4N1p1/8/4R3/4K3/8 w - - 0 1",kind:"discovered",difficulty:"easy",steps:[{sol:["e5c4"]},{reply:"b6c5",sol:["e3e8"]}]},
+  {fen:"r2k4/3B4/5p2/8/3Q4/8/4K3/8 w - - 0 1",kind:"discovered",difficulty:"easy",steps:[{sol:["d7c6"]},{reply:"d8c8",sol:["c6a8"]}]},
+  {fen:"4k3/8/8/8/5RBq/7P/1b1PP3/6K1 w - - 0 1",kind:"discovered",difficulty:"medium",steps:[{sol:["g4d7"]},{reply:"e8e7",sol:["f4h4"]}]},
+  {fen:"8/2k5/8/q7/8/4n3/1K1RP3/4B3 w - - 0 1",kind:"discovered",difficulty:"medium",steps:[{sol:["d2c2"]},{reply:"c7b6",sol:["e1a5"]}]},
+  {fen:"8/8/k5r1/8/6B1/1P1P4/5K2/6Q1 w - - 0 1",kind:"discovered",difficulty:"medium",steps:[{sol:["g4c8"]},{reply:"a6a5",sol:["g1g6"]}]},
+  {fen:"R1N1q3/8/2k4p/8/P7/8/2K5/8 w - - 0 1",kind:"discovered",difficulty:"medium",steps:[{sol:["c8a7"]},{reply:"c6d7",sol:["a8e8"]}]},
+  {fen:"8/b6k/4p3/8/8/8/1R2B1r1/4K3 w - - 0 1",kind:"discovered",difficulty:"medium",steps:[{sol:["e2d3"]},{reply:"h7h6",sol:["b2g2"]}]},
+  {fen:"8/4p2b/1p4k1/3p4/5P2/2BP4/2KR4/1B2q3 w - - 0 1",kind:"discovered",difficulty:"hard",steps:[{sol:["d2g2"]},{reply:"g6f5",sol:["c3e1"]}]},
+  {fen:"6k1/5p2/8/8/1P6/1b5P/3K3P/qB2Q3 w - - 0 1",kind:"discovered",difficulty:"hard",steps:[{sol:["b1h7"]},{reply:"g8g7",sol:["e1a1"]}]},
+  {fen:"2q5/4p3/2p3k1/8/2P1P1N1/6PQ/1bn5/7K w - - 0 1",kind:"discovered",difficulty:"hard",steps:[{sol:["g4e5"]},{reply:"g6g7",sol:["h3c8"]}]},
+  {fen:"6B1/8/4N1p1/4p3/r2P3P/1k6/1P6/2K5 w - - 0 1",kind:"discovered",difficulty:"hard",steps:[{sol:["e6c5"]},{reply:"b3b4",sol:["c5a4"]}]},
+  {fen:"5k2/4ppp1/2n5/8/3P1Q2/2R5/8/5K2 w - - 0 1",kind:"sac_mate",difficulty:"medium",steps:[{sol:["f4b8"]},{reply:"c6b8",sol:["c3c8"]}]},
+  {fen:"4r2k/6pp/7N/3Q3p/1n6/8/5K2/8 w - - 0 1",kind:"sac_mate",difficulty:"medium",steps:[{sol:["d5g8"]},{reply:"e8g8",sol:["h6f7"]}]},
+  {fen:"q5k1/5ppp/7p/4Q3/4R3/8/4K3/8 w - - 0 1",kind:"sac_mate",difficulty:"medium",steps:[{sol:["e5e8"]},{reply:"a8e8",sol:["e4e8"]}]},
+  {fen:"k7/pp1N4/8/3R4/3Q3r/5P2/2K5/8 w - - 0 1",kind:"sac_mate",difficulty:"medium",steps:[{sol:["d4a7"]},{reply:"a8a7",sol:["d5a5"]}]},
+  {fen:"1k4r1/ppp5/8/8/4R2P/8/K7/4Q3 w - - 0 1",kind:"sac_mate",difficulty:"medium",steps:[{sol:["e4e8"]},{reply:"g8e8",sol:["e1e8"]}]},
+  {fen:"k1r5/pp6/N7/p7/4r3/6Q1/8/1K6 w - - 0 1",kind:"sac_mate",difficulty:"medium",steps:[{sol:["g3b8"]},{reply:"c8b8",sol:["a6c7"]}]},
+  {fen:"1r4kb/2b1Rppp/8/1R6/8/8/2PB2K1/8 w - - 0 1",kind:"sac_mate",difficulty:"hard",steps:[{sol:["b5b8"]},{reply:"c7b8",sol:["e7e8"]}]},
+  {fen:"3r2k1/5ppp/4Q3/8/1r6/4R3/8/K1B5 w - - 0 1",kind:"sac_mate",difficulty:"hard",steps:[{sol:["e6e8"]},{reply:"d8e8",sol:["e3e8"]}]},
+  {fen:"k7/pp1N4/8/8/b1P2R2/b7/5Q2/K7 w - - 0 1",kind:"sac_mate",difficulty:"hard",steps:[{sol:["f4f8"]},{reply:"a3f8",sol:["f2f8"]}]},
+  {fen:"k2r4/pp6/6p1/1N6/5Q2/8/1BK4B/8 w - - 0 1",kind:"sac_mate",difficulty:"hard",steps:[{sol:["f4b8"]},{reply:"d8b8",sol:["b5c7"]}]},
+  {fen:"1kq3R1/bpp5/8/6pQ/7P/1B6/3P1P2/3K4 w - - 0 1",kind:"sac_mate",difficulty:"hard",steps:[{sol:["g8c8"]},{reply:"b8c8",sol:["h5e8"]}]},
+  {fen:"1k5q/ppp5/1N4Q1/4n3/5PR1/8/8/2KB4 w - - 0 1",kind:"sac_mate",difficulty:"hard",steps:[{sol:["g6g8"]},{reply:"h8g8",sol:["g4g8"]}]},
+  {fen:"1k6/pp6/4r3/6p1/7R/P7/2R2K2/8 w - - 0 1",kind:"mate2",difficulty:"medium",steps:[{sol:["h4h8"]},{reply:"e6e8",sol:["h8e8"]}]},
+  {fen:"7n/1k6/2p5/r5p1/5P2/5Q2/8/2K4B w - - 0 1",kind:"mate2",difficulty:"medium",steps:[{sol:["f3c6"]},{reply:"b7b8",sol:["c6b7"]}]},
+  {fen:"7k/Bn4pp/8/1r6/6Q1/7P/8/K7 w - - 0 1",kind:"mate2",difficulty:"medium",steps:[{sol:["g4c8"]},{reply:"b7d8",sol:["c8d8"]}]},
+  {fen:"k7/pp6/3pb3/3r4/8/8/4K3/2B4Q w - - 0 1",kind:"mate2",difficulty:"medium",steps:[{sol:["h1h8"]},{reply:"e6g8",sol:["h8g8"]}]},
+  {fen:"6k1/2b4p/8/2n1p3/2R5/P7/1K3Q2/8 w - - 0 1",kind:"mate2",difficulty:"medium",steps:[{sol:["c4g4"]},{reply:"g8h8",sol:["f2f6","f2f8"]}]},
+  {fen:"B1k5/1p3QRn/6p1/1n1r4/8/P7/P7/7K w - - 0 1",kind:"mate2",difficulty:"hard",steps:[{sol:["f7b7"]},{reply:"c8d8",sol:["b7b8"]}]},
+  {fen:"7k/1Q2R1pp/2r1p1n1/4p1pb/2P5/8/5K2/8 w - - 0 1",kind:"mate2",difficulty:"hard",steps:[{sol:["e7e8"]},{reply:"g6f8",sol:["e8f8"]}]},
+  {fen:"5k2/3rppp1/7n/8/1P1P4/8/R7/2BK3N w - - 0 1",kind:"mate2",difficulty:"hard",steps:[{sol:["a2a8"]},{reply:"d7d8",sol:["a8d8"]}]},
+  {fen:"7k/6pp/8/r1r1r1Q1/P2P3R/P1B5/8/K7 w - - 0 1",kind:"mate2",difficulty:"hard",steps:[{sol:["g5d8"]},{reply:"e5e8",sol:["d8e8"]}]},
+  {fen:"r1k5/1Rpp2r1/8/6Q1/3P4/6BP/1P6/6K1 w - - 0 1",kind:"mate2",difficulty:"hard",steps:[{sol:["b7c7"]},{reply:"c8b8",sol:["g5b5","g5d8"]}]}
 ];
 
 (function () {
@@ -815,17 +895,45 @@ const ALL_PUZZLES = [
         free_capture: '아무도 지키지 않는 상대 기물을 공짜로 잡아보세요! 🎯',
         good_trade: '더 힘센 기물과 바꿀 수 있는 수를 찾아보세요! ⚖️',
         fork: '한 번에 기물 두 개를 동시에 노려보세요! 🍴',
-        fork_check: '체크를 하면서 동시에 다른 기물도 노려보세요! ⚡'
+        fork_check: '체크를 하면서 동시에 다른 기물도 노려보세요! ⚡',
+        pin: '킹 앞에 묶여서 못 움직이는 기물을 노려보세요! 📌',
+        skewer: '킹을 먼저 공격해서 뒤에 숨은 기물을 노려보세요! 🍢',
+        discovered: '기물을 비켜서 숨어 있던 공격을 열어보세요! 🎭',
+        sac_mate: '기물을 미끼로 내주고 두 수 만에 체크메이트하세요! 🎣',
+        mate2: '두 수 만에 체크메이트를 만들어보세요! 👑'
       },
+      step2Prompt: function (kind) { return (kind === 'sac_mate' || kind === 'mate2') ? '이제 체크메이트로 마무리하세요! 🏆' : '이제 기물을 잡아보세요! 🎯'; },
+      stepChip: function (i, n) { return n + '수 문제 · ' + i + '/' + n; },
+      stepGood: '좋아요! 👍',
+      stepReply: '상대가 응수했어요. 한 수 더 두세요!',
+      revealMulti: function (list) { return '정답은 ' + list.map(function (x, i) { return (i + 1) + ') ' + x[0] + ' ' + x[1] + ' → ' + x[2]; }).join(', ') + ' 순서예요. 다음엔 꼭 스스로 찾아봐요! (점수 없음)'; },
+      rankTitle: ['다시 도전해봐요! 💪', '체스 새싹 🌱', '체스 기사 🛡️', '체스 마스터 👑'],
+      starsLabel: function (n) { return '별 ' + n + '개'; },
+      doneScore: function (score, max) { return score + ' / ' + max + '점'; },
+      doneFirstTry: function (n, total) { return '한 번에 맞힌 문제: ' + total + '문제 중 ' + n + '문제'; },
+      bestLine: function (score, stars) { return '최고 기록 ' + score + '점 ' + stars; },
+      menuBest: function (score, stars) { return '최고 ' + score + '점 ' + stars; },
+      newBest: '🎉 새로운 최고 기록이에요!',
+      soundOn: '소리 켜짐 (누르면 꺼져요)', soundOff: '소리 꺼짐 (누르면 켜져요)',
       kindHint: function (kind, pieceName) {
+        const iga = josa(pieceName, '이', '가'), ro = josa(pieceName, '으로', '로'), eul = josa(pieceName, '을', '를');
         const map = {
-          mate: pieceName + '이 움직이면 상대 킹이 도망갈 칸이 하나도 없어져요. 킹 주변 칸을 하나씩 세어보세요!',
-          free_capture: pieceName + '이 갈 수 있는 칸 중에, 아무도 지켜주지 않는 상대 기물이 있어요. 잘 찾아보세요!',
-          good_trade: pieceName + '로 나보다 더 힘센 기물을 잡을 수 있어요. 나중에 내 기물을 잃어도 결국 이득이에요!',
-          fork: pieceName + '이 한 번만 움직여도 두 개의 기물을 동시에 노릴 수 있는 자리가 있어요. 어디일까요?',
-          fork_check: pieceName + '로 체크를 하면서 동시에 다른 기물도 공격해보세요. 상대는 둘 다 지킬 수 없어요!'
+          mate: iga + ' 움직이면 상대 킹이 도망갈 칸이 하나도 없어져요. 킹 주변 칸을 하나씩 세어보세요!',
+          free_capture: iga + ' 갈 수 있는 칸 중에, 아무도 지켜주지 않는 상대 기물이 있어요. 잘 찾아보세요!',
+          good_trade: ro + ' 나보다 더 힘센 기물을 잡을 수 있어요. 나중에 내 기물을 잃어도 결국 이득이에요!',
+          fork: iga + ' 한 번만 움직여도 두 개의 기물을 동시에 노릴 수 있는 자리가 있어요. 어디일까요?',
+          fork_check: ro + ' 체크를 하면서 동시에 다른 기물도 공격해보세요. 상대는 둘 다 지킬 수 없어요!',
+          pin: eul + ' 잘 살펴보세요. 킹과 한 줄에 서서 움직일 수 없는 상대 기물을 공격할 수 있어요!',
+          skewer: ro + ' 킹에게 체크를 걸어보세요. 킹이 비키면 그 뒤에 있는 기물을 잡을 수 있어요!',
+          discovered: eul + ' 움직이면 뒤에 숨어 있던 기물의 공격이 열려요. 체크가 되는 칸을 찾아보세요!',
+          sac_mate: eul + ' 일부러 내주는 수예요! 상대가 잡을 수밖에 없는 칸에 체크를 걸어보세요.',
+          mate2: ro + ' 먼저 체크를 걸어보세요. 상대가 막거나 피한 다음에 체크메이트가 돼요!'
         };
         return map[kind] || '기물들이 어디로 움직일 수 있는지 하나씩 확인해보세요.';
+      },
+      stepHint: function (kind, pieceName) {
+        const ro = josa(pieceName, '으로', '로');
+        return (kind === 'sac_mate' || kind === 'mate2') ? ro + ' 체크메이트를 만들 수 있어요. 킹이 도망갈 칸이 남는지 확인해보세요!' : ro + ' 상대 기물을 잡을 수 있어요!';
       }
     },
     en: {
@@ -899,17 +1007,45 @@ const ALL_PUZZLES = [
         free_capture: 'Capture a piece that nobody is protecting! 🎯',
         good_trade: 'Find a trade that wins you a stronger piece! ⚖️',
         fork: 'Attack two pieces at the same time! 🍴',
-        fork_check: 'Give check while also attacking another piece! ⚡'
+        fork_check: 'Give check while also attacking another piece! ⚡',
+        pin: 'Go after a piece that is stuck in front of its king! 📌',
+        skewer: 'Attack the king first, then win the piece hiding behind it! 🍢',
+        discovered: 'Move a piece out of the way to open a hidden attack! 🎭',
+        sac_mate: 'Give up a piece as bait and checkmate in two moves! 🎣',
+        mate2: 'Checkmate in two moves! 👑'
       },
+      step2Prompt: function (kind) { return (kind === 'sac_mate' || kind === 'mate2') ? 'Now finish with checkmate! 🏆' : 'Now capture the piece! 🎯'; },
+      stepChip: function (i, n) { return n + '-move puzzle · ' + i + '/' + n; },
+      stepGood: 'Good! 👍',
+      stepReply: 'Your opponent answered. Play one more move!',
+      revealMulti: function (list) { return 'The answer was ' + list.map(function (x, i) { return (i + 1) + ') ' + x[0] + ' ' + x[1] + ' → ' + x[2]; }).join(', ') + '. Try to find it yourself next time! (no points)'; },
+      rankTitle: ['Try again! 💪', 'Chess Sprout 🌱', 'Chess Knight 🛡️', 'Chess Master 👑'],
+      starsLabel: function (n) { return n + (n === 1 ? ' star' : ' stars'); },
+      doneScore: function (score, max) { return score + ' / ' + max + ' points'; },
+      doneFirstTry: function (n, total) { return 'Solved on the first try: ' + n + ' of ' + total; },
+      bestLine: function (score, stars) { return 'Best score ' + score + ' ' + stars; },
+      menuBest: function (score, stars) { return 'Best ' + score + ' ' + stars; },
+      newBest: '🎉 New best score!',
+      soundOn: 'Sound on (tap to mute)', soundOff: 'Sound off (tap to unmute)',
       kindHint: function (kind, pieceName) {
+        const pn = pieceName.toLowerCase();
         const map = {
-          mate: 'Once your ' + pieceName.toLowerCase() + ' moves, the enemy king will have nowhere to run. Count the squares around the king!',
-          free_capture: 'Your ' + pieceName.toLowerCase() + ' can reach a piece that nobody is guarding. Can you spot it?',
-          good_trade: 'Your ' + pieceName.toLowerCase() + ' can capture something worth more than itself — even if it gets captured back, you still come out ahead!',
-          fork: 'One move with your ' + pieceName.toLowerCase() + ' can attack two pieces at once. Where could that be?',
-          fork_check: 'Give check with your ' + pieceName.toLowerCase() + ' while also attacking another piece — they can only save one!'
+          mate: 'Once your ' + pn + ' moves, the enemy king will have nowhere to run. Count the squares around the king!',
+          free_capture: 'Your ' + pn + ' can reach a piece that nobody is guarding. Can you spot it?',
+          good_trade: 'Your ' + pn + ' can capture something worth more than itself — even if it gets captured back, you still come out ahead!',
+          fork: 'One move with your ' + pn + ' can attack two pieces at once. Where could that be?',
+          fork_check: 'Give check with your ' + pn + ' while also attacking another piece — they can only save one!',
+          pin: 'Look at your ' + pn + '. It can attack an enemy piece that cannot move because it stands in line with its king!',
+          skewer: 'Give check with your ' + pn + '. When the king steps aside, you can take the piece behind it!',
+          discovered: 'Moving your ' + pn + ' opens an attack from the piece hiding behind it. Find the square that gives check!',
+          sac_mate: 'Your ' + pn + ' is the bait! Give check on a square where your opponent has to capture it.',
+          mate2: 'Start with a check from your ' + pn + '. After your opponent blocks or runs, it is checkmate!'
         };
         return map[kind] || 'Look carefully at where each piece can move.';
+      },
+      stepHint: function (kind, pieceName) {
+        const pn = pieceName.toLowerCase();
+        return (kind === 'sac_mate' || kind === 'mate2') ? 'Your ' + pn + ' can give checkmate. Check that the king has no squares left!' : 'Your ' + pn + ' can capture an enemy piece!';
       }
     }
   };
@@ -956,7 +1092,8 @@ const ALL_PUZZLES = [
     return a;
   }
 
-  // Pick a balanced set per difficulty, mixing puzzle kinds as evenly as possible.
+  // Pick a mixed set per difficulty: kinds are drawn at random (bigger groups a little more often),
+  // at most two puzzles of one kind, so no single puzzle shows up in every round.
   function pickRound() {
     const picked = [];
     ['easy', 'medium', 'hard'].forEach(function (d) {
@@ -964,14 +1101,19 @@ const ALL_PUZZLES = [
       ALL_PUZZLES.filter(function (p) { return p.difficulty === d; }).forEach(function (p) {
         (groups[p.kind] = groups[p.kind] || []).push(p);
       });
-      const kinds = shuffle(Object.keys(groups));
-      kinds.forEach(function (k) { shuffle(groups[k]); });
+      const kinds = Object.keys(groups);
+      const weight = {}, used = {};
+      kinds.forEach(function (k) { weight[k] = Math.sqrt(groups[k].length); shuffle(groups[k]); });
       const chosen = [];
-      let i = 0;
-      while (chosen.length < ROUND_SIZE[d] && kinds.some(function (k) { return groups[k].length; })) {
-        const k = kinds[i % kinds.length];
-        if (groups[k].length) chosen.push(groups[k].pop());
-        i++;
+      let cap = 2;
+      while (chosen.length < ROUND_SIZE[d]) {
+        const avail = kinds.filter(function (k) { return groups[k].length && (used[k] || 0) < cap; });
+        if (!avail.length) { if (kinds.some(function (k) { return groups[k].length; })) { cap += 1; continue; } break; }
+        let roll = Math.random() * avail.reduce(function (n, k) { return n + weight[k]; }, 0);
+        let k = avail[avail.length - 1];
+        for (let i = 0; i < avail.length; i++) { roll -= weight[avail[i]]; if (roll <= 0) { k = avail[i]; break; } }
+        chosen.push(groups[k].pop());
+        used[k] = (used[k] || 0) + 1;
       }
       picked.push.apply(picked, shuffle(chosen));
     });
@@ -980,7 +1122,6 @@ const ALL_PUZZLES = [
 
   let puzzleIndex = 0;
   let score = 0;
-  let board = [];
   let playerColor = 'w';
   let selected = null;
   let legalTargets = [];
@@ -1024,6 +1165,11 @@ const ALL_PUZZLES = [
   function isBlack(p) { return p === p.toLowerCase(); }
   function inBounds(r, c) { return r >= 0 && r < 8 && c >= 0 && c < 8; }
   function sqName(r, c) { return String.fromCharCode(97 + c) + (8 - r); }
+  function josa(word, withFinal, withoutFinal) {
+    const code = word.charCodeAt(word.length - 1) - 0xAC00;
+    const hasFinal = code >= 0 && code <= 11171 && code % 28 !== 0;
+    return word + (hasFinal ? withFinal : withoutFinal);
+  }
   function rcFromSquare(name) { return [8 - Number(name[1]), name.charCodeAt(0) - 97]; }
 
   function parseFEN(fen) {
@@ -1041,57 +1187,6 @@ const ALL_PUZZLES = [
       b.push(boardRow);
     }
     return b;
-  }
-
-  function generateMoves(b, r, c) {
-    const piece = b[r][c];
-    if (!piece) return [];
-    const white = isWhite(piece);
-    const type = piece.toUpperCase();
-    const moves = [];
-
-    function tryStep(nr, nc) {
-      if (!inBounds(nr, nc)) return;
-      const target = b[nr][nc];
-      if (!target) { moves.push([nr, nc]); return; }
-      if ((white && isBlack(target)) || (!white && isWhite(target))) moves.push([nr, nc]);
-    }
-    function trySlide(dr, dc) {
-      let nr = r + dr, nc = c + dc;
-      while (inBounds(nr, nc)) {
-        const target = b[nr][nc];
-        if (!target) { moves.push([nr, nc]); nr += dr; nc += dc; continue; }
-        if ((white && isBlack(target)) || (!white && isWhite(target))) moves.push([nr, nc]);
-        break;
-      }
-    }
-
-    if (type === 'N') {
-      [[1,2],[2,1],[-1,2],[-2,1],[1,-2],[2,-1],[-1,-2],[-2,-1]].forEach(function (o) { tryStep(r+o[0], c+o[1]); });
-    } else if (type === 'K') {
-      [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]].forEach(function (o) { tryStep(r+o[0], c+o[1]); });
-    } else if (type === 'P') {
-      const dir = white ? -1 : 1;
-      const startRow = white ? 6 : 1;
-      if (inBounds(r+dir, c) && !b[r+dir][c]) {
-        moves.push([r+dir, c]);
-        if (r === startRow && !b[r+2*dir][c]) moves.push([r+2*dir, c]);
-      }
-      [-1, 1].forEach(function (dc) {
-        const nr = r+dir, nc = c+dc;
-        if (inBounds(nr, nc) && b[nr][nc]) {
-          const tgt = b[nr][nc];
-          if ((white && isBlack(tgt)) || (!white && isWhite(tgt))) moves.push([nr, nc]);
-        }
-      });
-    } else {
-      let dirs = [];
-      if (type === 'R') dirs = [[1,0],[-1,0],[0,1],[0,-1]];
-      if (type === 'B') dirs = [[1,1],[1,-1],[-1,1],[-1,-1]];
-      if (type === 'Q') dirs = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
-      dirs.forEach(function (d) { trySlide(d[0], d[1]); });
-    }
-    return moves;
   }
 
   function currentPuzzle() { return PUZZLES[puzzleIndex]; }
@@ -1137,8 +1232,9 @@ const ALL_PUZZLES = [
     nextBtn.textContent = s.nextBtn;
     resetBtn.textContent = s.resetBtn;
     restartBtn.textContent = s.restartBtn;
-    doneTitleEl.textContent = s.doneTitle;
-    doneSummary.textContent = s.doneSummary(score, PUZZLES.length);
+    renderDone();
+    renderBestLine();
+    updateSoundBtn();
     langKoBtn.classList.toggle('active', lang === 'ko');
     langEnBtn.classList.toggle('active', lang === 'en');
     document.documentElement.lang = lang;
@@ -1147,7 +1243,11 @@ const ALL_PUZZLES = [
   function applyPuzzleStrings() {
     const s = t();
     const p = currentPuzzle();
-    promptTextEl.textContent = s.kindPrompt[p.kind];
+    if (!p) return; // round finished: nothing on the board to describe
+    const nSteps = qSteps(p).length, chip = document.getElementById('step-chip');
+    promptTextEl.textContent = qStep === 0 ? s.kindPrompt[p.kind] : s.step2Prompt(p.kind);
+    chip.hidden = nSteps < 2;
+    chip.textContent = s.stepChip(Math.min(qStep + 1, nSteps), nSteps);
     diffLabelEl.textContent = s.diff[p.difficulty];
     turnNoteEl.textContent = playerColor === 'w' ? s.whiteTurn : s.blackTurn;
   }
@@ -1161,10 +1261,28 @@ const ALL_PUZZLES = [
     if (currentView === 'study' || currentView === 'tactics' || currentView === 'openings') renderStudyAll();
   }
 
+  // ---- Quiz: every move goes through the real rules engine; puzzles may have several steps ----
+  let qState = null, qStageState = null, qStep = 0, qLast = null, qLocked = false, qMissed = false, qToken = 0;
+  let roundFirstTry = 0, roundResult = null;
+  function qSteps(p) { return p.steps || [{ sol: p.solution }]; }
+  function qFind(st, u) {
+    const a = rcFromSquare(u.slice(0, 2)), b = rcFromSquare(u.slice(2, 4));
+    return legalMoves(st, a[0], a[1]).filter(function (m) { return m.tr === b[0] && m.tc === b[1]; })[0];
+  }
+  function roundMax() { return PUZZLES.reduce(function (n, p) { return n + DIFF_POINTS[p.difficulty]; }, 0); }
+  function loadBest() {
+    try { const b = JSON.parse(localStorage.getItem('chess-quiz-best') || 'null'); if (b && typeof b.score === 'number') return b; } catch (e) {}
+    return null;
+  }
+  function starsFor(sc, max) { return sc >= max * 0.85 ? 3 : (sc >= max * 0.6 ? 2 : (sc > 0 ? 1 : 0)); }
+  function starText(n) { return '★★★'.slice(0, n) + '☆☆☆'.slice(0, 3 - n); }
+
   function loadPuzzle() {
+    qToken++;
     const p = currentPuzzle();
-    board = parseFEN(p.fen);
-    playerColor = p.fen.split(' ')[1] || 'w';
+    qState = { board: parseFEN(p.fen), turn: 'w', castle: { K: false, Q: false, k: false, q: false }, ep: null, half: 0 };
+    qStageState = qState; qStep = 0; qLast = null; qLocked = false; qMissed = false;
+    playerColor = 'w';
     selected = null;
     legalTargets = [];
     solved = false;
@@ -1206,17 +1324,20 @@ const ALL_PUZZLES = [
         cell.className = 'sq ' + (isLight ? 'light' : 'dark');
         cell.dataset.r = r;
         cell.dataset.c = c;
-        const piece = board[r][c];
+        const piece = qState.board[r][c];
         if (piece) {
+          cell.dataset.p = piece;
           const span = document.createElement('span');
           span.className = 'piece';
           span.innerHTML = pieceSvg(piece);
           cell.appendChild(span);
         }
+        if (qLast && ((qLast[0][0] === r && qLast[0][1] === c) || (qLast[1][0] === r && qLast[1][1] === c))) cell.classList.add('last');
         if (selected && selected[0] === r && selected[1] === c) cell.classList.add('selected');
-        if (legalTargets.some(function (t2) { return t2[0] === r && t2[1] === c; })) {
+        const tm = legalTargets.filter(function (m) { return m.tr === r && m.tc === c; });
+        if (tm.length) {
           const dot = document.createElement('div');
-          dot.className = 'legal-dot' + (piece ? ' capture' : '');
+          dot.className = 'legal-dot' + (tm[0].capture ? ' capture' : '');
           cell.appendChild(dot);
         }
         cell.addEventListener('click', onSquareClick);
@@ -1226,62 +1347,92 @@ const ALL_PUZZLES = [
   }
 
   function onSquareClick(e) {
-    if (solved) return;
+    if (solved || qLocked) return;
     const r = Number(e.currentTarget.dataset.r);
     const c = Number(e.currentTarget.dataset.c);
-    const piece = board[r][c];
-
+    const piece = qState.board[r][c];
+    const mine = piece && isWhite(piece);
     if (selected) {
-      const isTarget = legalTargets.some(function (t2) { return t2[0] === r && t2[1] === c; });
-      if (isTarget) { attemptMove(selected[0], selected[1], r, c); return; }
-      if (piece && ((playerColor === 'w' && isWhite(piece)) || (playerColor === 'b' && isBlack(piece)))) {
-        selected = [r, c];
-        legalTargets = generateMoves(board, r, c);
-        render();
-        return;
-      }
-      selected = null; legalTargets = []; render();
+      const cand = legalTargets.filter(function (m) { return m.tr === r && m.tc === c; })[0];
+      if (cand) { attemptMove(cand); return; }
+      if (mine && !(selected[0] === r && selected[1] === c)) { selected = [r, c]; legalTargets = legalMoves(qState, r, c); }
+      else { selected = null; legalTargets = []; }
+      render();
       return;
     }
-
-    if (piece && ((playerColor === 'w' && isWhite(piece)) || (playerColor === 'b' && isBlack(piece)))) {
-      selected = [r, c];
-      legalTargets = generateMoves(board, r, c);
-      render();
-    }
+    if (mine) { selected = [r, c]; legalTargets = legalMoves(qState, r, c); render(); }
   }
 
-  function attemptMove(fr, fc, tr, tc) {
+  function qPlay(m) {
+    const res = applyMove(qState, m, 'Q');
+    qState = res.state;
+    qLast = [[m.fr, m.fc], [m.tr, m.tc]];
+    sfx(res.captured ? 'capture' : 'move');
+  }
+
+  // After a correct first step the opponent answers, then the next step begins.
+  function qOpponentThen(done) {
+    const tok = qToken;
+    setTimeout(function () {
+      if (tok !== qToken) return;
+      const steps = qSteps(currentPuzzle());
+      const rm = qFind(qState, steps[qStep + 1].reply);
+      if (rm) qPlay(rm);
+      qStep += 1;
+      qStageState = qState;
+      applyPuzzleStrings();
+      render();
+      done();
+    }, 900);
+  }
+
+  function attemptMove(m) {
     const s = t();
     const p = currentPuzzle();
-    const moveStr = sqName(fr, fc) + sqName(tr, tc);
-    const isCorrect = p.solution.indexOf(moveStr) !== -1;
-    const piece = board[fr][fc];
-
-    if (isCorrect) {
-      board[tr][tc] = piece; board[fr][fc] = null;
-      selected = null; legalTargets = []; solved = true;
-      render();
-      flashSquare(tr, tc, 'good');
-      const pts = DIFF_POINTS[p.difficulty];
-      score += pts;
-      scoreEl.textContent = score;
-      progressFillEl.style.width = Math.round(((puzzleIndex + 1) / PUZZLES.length) * 100) + '%';
-      const pieceName = s.pieces[piece.toUpperCase()];
-      feedbackEl.textContent = s.correct(pieceName, sqName(fr, fc), sqName(tr, tc), pts);
-      feedbackEl.className = 'feedback good';
-      hintBtn.disabled = true; revealBtn.disabled = true;
-      nextRow.classList.add('show');
-    } else {
-      flashSquare(tr, tc, 'bad');
+    const steps = qSteps(p);
+    const from = sqName(m.fr, m.fc), to = sqName(m.tr, m.tc);
+    selected = null; legalTargets = [];
+    if (steps[qStep].sol.indexOf(from + to) === -1) {
+      qMissed = true;
       const penalty = WRONG_PENALTY[p.difficulty];
       score = Math.max(0, score - penalty);
       scoreEl.textContent = score;
       feedbackEl.textContent = s.wrong(penalty);
       feedbackEl.className = 'feedback bad';
-      selected = null; legalTargets = [];
       render();
+      flashSquare(m.tr, m.tc, 'bad');
+      sfx('wrong');
+      return;
     }
+    qPlay(m);
+    if (qStep < steps.length - 1) {
+      qLocked = true;
+      hintBtn.disabled = true; revealBtn.disabled = true;
+      render();
+      flashSquare(m.tr, m.tc, 'good');
+      feedbackEl.textContent = s.stepGood;
+      feedbackEl.className = 'feedback good';
+      qOpponentThen(function () {
+        qLocked = false;
+        hintBtn.disabled = false; revealBtn.disabled = false;
+        feedbackEl.textContent = t().stepReply;
+        feedbackEl.className = 'feedback';
+      });
+      return;
+    }
+    solved = true;
+    render();
+    flashSquare(m.tr, m.tc, 'good');
+    const pts = DIFF_POINTS[p.difficulty];
+    score += pts;
+    if (!qMissed) roundFirstTry += 1;
+    scoreEl.textContent = score;
+    progressFillEl.style.width = Math.round(((puzzleIndex + 1) / PUZZLES.length) * 100) + '%';
+    feedbackEl.textContent = s.correct(s.pieces[m.piece.toUpperCase()], from, to, pts);
+    feedbackEl.className = 'feedback good';
+    hintBtn.disabled = true; revealBtn.disabled = true;
+    nextRow.classList.add('show');
+    sfx('correct', 0.16);
   }
 
   function flashSquare(r, c, kind) {
@@ -1293,53 +1444,139 @@ const ALL_PUZZLES = [
   }
 
   hintBtn.addEventListener('click', function () {
+    if (solved || qLocked) return;
     const s = t();
     const p = currentPuzzle();
-    const [fr, fc] = rcFromSquare(p.solution[0].slice(0, 2));
-    const piece = board[fr][fc];
-    const pieceName = s.pieces[piece.toUpperCase()];
-    feedbackEl.textContent = s.hintText(s.kindHint(p.kind, pieceName));
+    const a = rcFromSquare(qSteps(p)[qStep].sol[0].slice(0, 2));
+    const pieceName = s.pieces[qState.board[a[0]][a[1]].toUpperCase()];
+    feedbackEl.textContent = s.hintText(qStep === 0 ? s.kindHint(p.kind, pieceName) : s.stepHint(p.kind, pieceName));
     feedbackEl.className = 'feedback';
   });
 
+  // Show the answer: plays out the rest of the line, one move at a time. No points.
   revealBtn.addEventListener('click', function () {
-    if (solved) return;
-    const s = t();
+    if (solved || qLocked) return;
     const p = currentPuzzle();
-    const from = p.solution[0].slice(0, 2), to = p.solution[0].slice(2, 4);
-    const [fr, fc] = rcFromSquare(from);
-    const [tr, tc] = rcFromSquare(to);
-    const piece = board[fr][fc];
-    board[tr][tc] = piece; board[fr][fc] = null;
-    selected = null; legalTargets = []; solved = true;
-    render();
-    flashSquare(tr, tc, 'good');
-    const pieceName = s.pieces[piece.toUpperCase()];
-    feedbackEl.textContent = s.revealText(pieceName, from, to);
-    feedbackEl.className = 'feedback';
+    const steps = qSteps(p);
+    const shown = [];
+    qMissed = true; qLocked = true;
+    selected = null; legalTargets = [];
     hintBtn.disabled = true; revealBtn.disabled = true;
-    nextRow.classList.add('show');
+    const tok = qToken;
+    function finish() {
+      solved = true; qLocked = false;
+      const s = t();
+      const named = shown.map(function (x) { return [s.pieces[x[0]], x[1], x[2]]; });
+      feedbackEl.textContent = named.length === 1 ? s.revealText(named[0][0], named[0][1], named[0][2]) : s.revealMulti(named);
+      feedbackEl.className = 'feedback';
+      nextRow.classList.add('show');
+    }
+    function playStep() {
+      if (tok !== qToken) return;
+      const m = qFind(qState, steps[qStep].sol[0]);
+      shown.push([m.piece.toUpperCase(), sqName(m.fr, m.fc), sqName(m.tr, m.tc)]);
+      qPlay(m);
+      render();
+      flashSquare(m.tr, m.tc, 'good');
+      if (qStep < steps.length - 1) qOpponentThen(function () { setTimeout(playStep, 700); });
+      else finish();
+    }
+    playStep();
   });
+
+  function renderDone() {
+    if (!roundResult) return;
+    const s = t(), r = roundResult;
+    document.getElementById('done-stars').textContent = starText(r.stars);
+    document.getElementById('done-stars').setAttribute('aria-label', s.starsLabel(r.stars));
+    doneTitleEl.textContent = s.rankTitle[r.stars];
+    doneSummary.textContent = s.doneScore(r.score, r.max);
+    document.getElementById('done-first').textContent = s.doneFirstTry(r.firstTry, r.total);
+    const bestEl = document.getElementById('done-best');
+    bestEl.textContent = r.isNew ? s.newBest : s.bestLine(r.best, starText(r.bestStars));
+    bestEl.className = 'done-best' + (r.isNew ? ' new' : '');
+  }
+
+  function renderBestLine() {
+    const b = loadBest(), s = t();
+    const line = document.getElementById('best-line');
+    line.textContent = b ? s.bestLine(b.score, starText(b.stars)) : '';
+    document.getElementById('menu-quiz-meta').textContent = b ? s.menuBest(b.score, starText(b.stars)) : '';
+  }
+
+  function finishRound() {
+    const max = roundMax(), stars = starsFor(score, max), prev = loadBest();
+    const isNew = score > 0 && (!prev || score > prev.score);
+    if (isNew) { try { localStorage.setItem('chess-quiz-best', JSON.stringify({ score: score, stars: stars })); } catch (e) {} }
+    roundResult = { score: score, max: max, stars: stars, firstTry: roundFirstTry, total: PUZZLES.length, isNew: isNew,
+      best: isNew ? score : (prev ? prev.score : score), bestStars: isNew ? stars : (prev ? prev.stars : stars) };
+    document.querySelector('.layout').style.display = 'none';
+    renderDone();
+    renderBestLine();
+    doneCard.classList.add('show');
+    if (stars > 0) sfx('win', 0.1);
+  }
 
   nextBtn.addEventListener('click', function () {
     puzzleIndex += 1;
-    if (puzzleIndex >= PUZZLES.length) {
-      document.querySelector('.layout').style.display = 'none';
-      doneSummary.textContent = t().doneSummary(score, PUZZLES.length);
-      doneCard.classList.add('show');
-      return;
-    }
+    if (puzzleIndex >= PUZZLES.length) { finishRound(); return; }
     loadPuzzle();
   });
 
   function fullReset() {
-    puzzleIndex = 0; score = 0;
+    puzzleIndex = 0; score = 0; roundFirstTry = 0; roundResult = null;
     PUZZLES = pickRound();
     scoreEl.textContent = '0';
-    document.querySelector('.layout').style.display = 'grid';
+    document.querySelector('.layout').style.display = '';
     doneCard.classList.remove('show');
+    renderBestLine();
     loadPuzzle();
   }
+
+  // ---- Sound effects (synthesised, no files to load) ----
+  let soundOn = true;
+  try { if (localStorage.getItem('chess-sound') === 'off') soundOn = false; } catch (e) {}
+  let actx = null;
+  const SOUNDS = {
+    move: [[330, 0, 0.08, 'triangle', 0.22]],
+    capture: [[196, 0, 0.07, 'square', 0.12], [147, 0.05, 0.12, 'triangle', 0.24]],
+    check: [[784, 0, 0.09, 'sine', 0.2], [784, 0.13, 0.12, 'sine', 0.2]],
+    correct: [[523, 0, 0.11, 'sine', 0.22], [659, 0.1, 0.11, 'sine', 0.22], [784, 0.2, 0.2, 'sine', 0.22]],
+    wrong: [[208, 0, 0.13, 'triangle', 0.22], [156, 0.12, 0.22, 'triangle', 0.22]],
+    win: [[523, 0, 0.13, 'sine', 0.22], [659, 0.12, 0.13, 'sine', 0.22], [784, 0.24, 0.13, 'sine', 0.22], [1047, 0.36, 0.34, 'sine', 0.24]]
+  };
+  function sfx(name, delay) {
+    if (!soundOn) return;
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      if (!actx) actx = new AC();
+      if (actx.state === 'suspended') actx.resume();
+      const t0 = actx.currentTime + 0.01 + (delay || 0);
+      SOUNDS[name].forEach(function (n) {
+        const osc = actx.createOscillator(), g = actx.createGain();
+        osc.type = n[3]; osc.frequency.value = n[0];
+        g.gain.setValueAtTime(0.0001, t0 + n[1]);
+        g.gain.exponentialRampToValueAtTime(n[4], t0 + n[1] + 0.012);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + n[1] + n[2]);
+        osc.connect(g); g.connect(actx.destination);
+        osc.start(t0 + n[1]); osc.stop(t0 + n[1] + n[2] + 0.03);
+      });
+    } catch (e) {}
+  }
+  const soundBtn = document.getElementById('sound-btn');
+  function updateSoundBtn() {
+    soundBtn.textContent = soundOn ? '🔊' : '🔇';
+    soundBtn.setAttribute('aria-pressed', soundOn ? 'true' : 'false');
+    soundBtn.setAttribute('aria-label', soundOn ? t().soundOn : t().soundOff);
+    soundBtn.title = soundOn ? t().soundOn : t().soundOff;
+  }
+  soundBtn.addEventListener('click', function () {
+    soundOn = !soundOn;
+    try { localStorage.setItem('chess-sound', soundOn ? 'on' : 'off'); } catch (e) {}
+    updateSoundBtn();
+    sfx('move');
+  });
 
 
   // ================= Battle (1 vs 1) =================
@@ -1589,6 +1826,9 @@ const ALL_PUZZLES = [
     G.moveList.push({ white: isWhite(m.piece), mv: notate(m, res.captured, promoChoice || 'Q', G.status) });
     G.last = [[m.fr, m.fc], [m.tr, m.tc]];
     bSel = null; bTargets = []; bPendingPromo = null;
+    sfx(res.captured ? 'capture' : 'move');
+    if (G.status.type === 'checkmate') sfx('win', 0.2);
+    else if (G.status.check) sfx('check', 0.14);
     renderBattle();
   }
 
@@ -1971,6 +2211,7 @@ const ALL_PUZZLES = [
   function sComplete(okT) {
     SL.done = true; SL.sel = null; SL.targets = []; SL.promoPending = null;
     setFb(function () { return Lg(okT); }, 'end');
+    sfx('correct', 0.16);
     renderStudy();
   }
 
@@ -2026,6 +2267,7 @@ const ALL_PUZZLES = [
     }
     SL.sel = null; SL.targets = []; SL.promoPending = null;
     SL.last = [[m.fr, m.fc], [m.tr, m.tc]];
+    sfx(ok ? (res.captured ? 'capture' : 'move') : 'wrong');
     if (ok) {
       if (SL.logOn) SL.log.push(sanOf(SL.state, m, ns, res.captured));
       SL.state = ns;
@@ -2033,6 +2275,7 @@ const ALL_PUZZLES = [
         const key = res.captured ? 'escapeCapture' : (m.piece.toUpperCase() === 'K' ? 'escapeKing' : 'escapeBlock');
         SL.done = true;
         setFb(function () { return t()[key]; }, 'end');
+        sfx('correct', 0.16);
         renderStudy();
       } else if (task.then) sNextStage(task);
       else sComplete(task.ok || T('잘했어요! 👏', 'Well done! 👏'));
@@ -2064,6 +2307,7 @@ const ALL_PUZZLES = [
         const rr = applyMove(SL.state, mv, 'Q');
         if (SL.logOn) SL.log.push(sanOf(SL.state, mv, rr.state, rr.captured));
         SL.state = rr.state; SL.last = [[fr, fc], [tr, tc]];
+        sfx(rr.captured ? 'capture' : 'move');
       }
       SL.stageState = SL.state;
       SL.task = task.then;
@@ -2173,7 +2417,7 @@ const ALL_PUZZLES = [
 
   function sAdvance() {
     const lesson = curLessons()[SL.li];
-    if (SL.pi === lesson.pages.length - 1) { markLessonDone(lesson.id); SL.finished = true; renderStudy(); }
+    if (SL.pi === lesson.pages.length - 1) { markLessonDone(lesson.id); SL.finished = true; sfx('win'); renderStudy(); }
     else loadStudyPage(SL.li, SL.pi + 1);
   }
   document.getElementById('s-next').addEventListener('click', function () {
